@@ -40,7 +40,7 @@ export default function OnboardingPage() {
       }
 
       if (profile?.org_id) {
-        router.replace("/app");
+        router.replace("/");
         return;
       }
 
@@ -93,7 +93,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.replace("/app");
+    router.replace("/");
   }
 
   if (checking) {
