@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(false);
     if (error) return setError(error.message);
 
-    router.push("/app");
+    router.push("/");
   }
 
   async function signUp() {
@@ -37,7 +37,7 @@ export default function LoginPage() {
 
     const redirectUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/app`
+      ? `${window.location.origin}/`
       : undefined;
 
     const { error } = await supabase.auth.signUp({
@@ -52,7 +52,7 @@ export default function LoginPage() {
     if (error) return setError(error.message);
 
     // If email confirmations are ON, user may need to confirm before they can sign in.
-    router.push("/app");
+    router.push("/");
   }
 
   return (
