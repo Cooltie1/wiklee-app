@@ -74,8 +74,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-muted/40 p-4 text-foreground">
-      <div className="grid h-full w-full grid-cols-[84px_1fr] overflow-hidden rounded-2xl border bg-background shadow-sm">
+    <div className="h-screen w-screen overflow-hidden bg-background text-foreground">
+      <div className="grid h-full w-full grid-cols-[84px_1fr] overflow-hidden bg-background">
         <aside className="sticky top-0 h-full border-r bg-muted/30 p-3">
           <div className="mb-6 flex justify-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
