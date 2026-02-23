@@ -12,10 +12,17 @@ import {
   Search,
   Sparkles,
   Hexagon,
+  ChevronDown,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 
 const navItems = [
@@ -37,6 +44,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
+
+  const isUsersPage = pathname === "/users" || pathname.startsWith("/users/") || pathname === "/team" || pathname.startsWith("/team/");
+  const createButtonLabel = isUsersPage ? "+ Create User" : "+ Create Ticket";
 
   useEffect(() => {
     (async () => {
@@ -107,7 +117,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="grid h-full grid-rows-[60px_1fr] overflow-hidden">
           <header className="sticky top-0 flex items-center justify-between border-b px-4">
-            <h1 className="text-lg font-semibold">Wiklee Desk</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold">Wiklee Desk</h1>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 rounded-full px-4">
+                    {createButtonLabel}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem>{"+ Create Ticket"}</DropdownMenuItem>
+                  <DropdownMenuItem>{"+ Create User"}</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             <div className="flex items-center gap-3">
               <div className="relative w-64">
