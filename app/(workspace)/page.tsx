@@ -6,14 +6,8 @@ export default function TicketsPage() {
         <p className="text-sm text-zinc-500">All unsolved tickets in your workspace.</p>
       </div>
 
-      <div className="grid h-full grid-cols-3 gap-4 overflow-hidden">
-        {["Open Tickets", "Avg Ticket Age", "New Tickets"].map((card, index) => (
-          <article key={card} className="rounded-2xl bg-emerald-100/70 p-6">
-            <p className="text-sm text-zinc-600">{card}</p>
-            <p className="mt-4 text-5xl font-bold">{index === 1 ? "1d 3h" : index === 2 ? 3 : 23}</p>
-            <div className="mt-8 h-16 rounded-xl bg-gradient-to-r from-emerald-200 to-emerald-50" />
-          </article>
-        ))}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600">
+        Ticket metrics have been removed from this page.
       </div>
     </section>
   );
