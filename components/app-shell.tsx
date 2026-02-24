@@ -47,6 +47,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const isUsersPage = pathname === "/users" || pathname.startsWith("/users/") || pathname === "/team" || pathname.startsWith("/team/");
   const createButtonLabel = isUsersPage ? "+ Create User" : "+ Create Ticket";
+  const createButtonHref = isUsersPage ? "/users/new" : "/tickets/new";
 
   useEffect(() => {
     (async () => {
@@ -117,19 +118,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="grid h-full grid-rows-[60px_1fr] overflow-hidden">
           <header className="sticky top-0 flex items-center justify-between border-b px-4">
-            <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold">Wiklee Desk</h1>
+            <div className="flex items-center gap-1">
+              <Button asChild className="h-9 rounded-full px-4">
+                <Link href={createButtonHref}>{createButtonLabel}</Link>
+              </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 rounded-full px-4">
-                    {createButtonLabel}
+                  <Button size="icon" className="h-9 w-9 rounded-full" aria-label="Open create menu">
+                    <span className="h-4 w-px bg-primary-foreground/40" aria-hidden="true" />
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem>{"+ Create Ticket"}</DropdownMenuItem>
-                  <DropdownMenuItem>{"+ Create User"}</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/tickets/new">+ Create Ticket</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/users/new">+ Create User</Link>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
