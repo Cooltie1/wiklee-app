@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft } from "lucide-react";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -186,11 +187,19 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" className="w-full" onClick={() => setStep(1)} disabled={loading}>
-                  Back
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={() => setStep(1)}
+                  disabled={loading}
+                  aria-label="Back to personal info"
+                >
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Button className="w-full" onClick={createOrgAndAttach} disabled={loading}>
+                <Button className="flex-1" onClick={createOrgAndAttach} disabled={loading}>
                   {loading ? "Creating..." : "Create workspace"}
                 </Button>
               </div>
