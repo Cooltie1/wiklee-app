@@ -13,6 +13,7 @@ import {
   Sparkles,
   Hexagon,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -44,6 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   const isUsersPage = pathname === "/users" || pathname.startsWith("/users/") || pathname === "/team" || pathname.startsWith("/team/");
   const createButtonLabel = isUsersPage ? "+ Create User" : "+ Create Ticket";
@@ -82,6 +84,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (checking) {
     return <div className="flex h-screen w-screen items-center justify-center">Loading workspace...</div>;
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+    setSigningOut(false);
   }
 
   return (
@@ -159,12 +169,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <Sparkles className="h-4 w-4" />
               </Button>
 
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full border bg-primary text-primary-foreground"
-                aria-label="Workspace logo"
-              >
-                <Hexagon className="h-4 w-4" />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    aria-label="Open profile menu"
+                  >
+                    <Hexagon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleSignOut} disabled={signingOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {signingOut ? "Signing out..." : "Sign out"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
