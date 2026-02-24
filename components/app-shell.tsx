@@ -119,14 +119,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="grid h-full grid-rows-[60px_1fr] overflow-hidden">
           <header className="sticky top-0 flex items-center justify-between border-b px-4">
             <div className="flex items-center gap-1">
-              <Button asChild className="h-9 rounded-full px-4">
+              <Button asChild className="h-9 rounded-sm rounded-l-full px-4">
                 <Link href={createButtonHref}>{createButtonLabel}</Link>
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="icon" className="h-9 w-9 rounded-full" aria-label="Open create menu">
-                    <span className="h-4 w-px bg-primary-foreground/40" aria-hidden="true" />
+                  <Button size="icon" className="h-9 w-9 rounded-l-none rounded-r-full" aria-label="Open create menu">
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
