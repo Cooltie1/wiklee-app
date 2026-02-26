@@ -82,7 +82,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (!profile?.org_id) {
+      const hasFirstName = !!profile?.first_name?.trim();
+
+      let hasOrgName = false;
+
+      if (profile?.org_id) {
+        const { data: org } = await supabase
+          .from("orgs")
+          .select("name")
+          .eq("id", profile.org_id)
+          .single();
+
+        hasOrgName = !!org?.name?.trim();
+      }
+
+      if (!hasFirstName || !hasOrgName) {
         router.replace("/onboarding");
         return;
       }

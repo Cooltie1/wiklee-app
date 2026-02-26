@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/lib/supabase";
+
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { ArrowLeft } from "lucide-react";
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 export default function OnboardingPage() {
+  console.log("🔥 OnboardingPage rendered");
   const router = useRouter();
 
   const [firstName, setFirstName] = useState("");
@@ -25,46 +28,96 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // If they already have an org, skip onboarding
+  // Skip onboarding ONLY if:
+  // - profile.first_name is set
+  // - org.name is set
   useEffect(() => {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        router.replace("/login");
-        return;
-      }
+  (async () => {
+    console.log("🚀 Onboarding check starting...");
 
-      const { data: profile, error: profileErr } = await supabase
-        .from("profiles")
-        .select("org_id, first_name, last_name, avatar_path")
-        .eq("id", userData.user.id)
+    const { data: userData } = await supabase.auth.getUser();
+    console.log("👤 userData:", userData);
+
+    if (!userData.user) {
+      console.log("❌ No user found, redirecting to login");
+      router.replace("/login");
+      return;
+    }
+
+    const { data: profile, error: profileErr } = await supabase
+      .from("profiles")
+      .select("org_id, first_name, last_name, avatar_path")
+      .eq("id", userData.user.id)
+      .single();
+
+    console.log("📄 profile:", profile);
+    console.log("📄 profile error:", profileErr);
+
+    if (profileErr) {
+      setError(profileErr.message);
+      setChecking(false);
+      return;
+    }
+
+    let orgName = "";
+    let orgData = null;
+
+    if (profile?.org_id) {
+      const { data: org, error: orgErr } = await supabase
+        .from("orgs")
+        .select("id, name")
+        .eq("id", profile.org_id)
         .single();
 
-      if (profileErr) {
-        setError(profileErr.message);
+      orgData = org;
+
+      console.log("🏢 org:", org);
+      console.log("🏢 org error:", orgErr);
+
+      if (orgErr) {
+        setError(orgErr.message);
         setChecking(false);
         return;
       }
 
-      if (profile?.org_id) {
-        router.replace("/");
-        return;
-      }
+      orgName = org?.name ?? "";
+    } else {
+      console.log("⚠️ profile has NO org_id");
+    }
 
-      setFirstName(profile?.first_name ?? "");
-      setLastName(profile?.last_name ?? "");
-      setAvatarPath(profile?.avatar_path ?? null);
-      setUserId(userData.user.id);
-      setChecking(false);
-    })();
-  }, [router]);
+    const hasFirstName = !!profile?.first_name?.trim();
+    const hasOrgName = !!orgName.trim();
+
+    console.log("🧠 hasFirstName:", hasFirstName);
+    console.log("🧠 hasOrgName:", hasOrgName);
+    console.log("🧠 raw first_name:", profile?.first_name);
+    console.log("🧠 raw orgName:", orgName);
+
+    if (hasFirstName && hasOrgName) {
+      console.log("✅ Skipping onboarding → redirecting home");
+      router.replace("/");
+      return;
+    }
+
+    console.log("➡️ Staying in onboarding");
+
+    setFirstName(profile?.first_name ?? "");
+    setLastName(profile?.last_name ?? "");
+    setAvatarPath(profile?.avatar_path ?? null);
+    setCompanyName(orgName);
+    setUserId(userData.user.id);
+
+    setStep(hasFirstName ? 2 : 1);
+
+    setChecking(false);
+  })();
+}, [router]);
 
   function goToCompanyStep() {
     const trimmedFirstName = firstName.trim();
-    const trimmedLastName = lastName.trim();
 
-    if (!trimmedFirstName || !trimmedLastName) {
-      setError("Please enter your first and last name.");
+    if (!trimmedFirstName) {
+      setError("Please enter your first name.");
       return;
     }
 
@@ -72,7 +125,7 @@ export default function OnboardingPage() {
     setStep(2);
   }
 
-  async function createOrgAndAttach() {
+  async function saveOnboarding() {
     setLoading(true);
     setError(null);
 
@@ -88,9 +141,9 @@ export default function OnboardingPage() {
     const trimmedLastName = lastName.trim();
     const trimmedCompanyName = companyName.trim();
 
-    if (!trimmedFirstName || !trimmedLastName) {
+    if (!trimmedFirstName) {
       setLoading(false);
-      setError("Please enter your first and last name.");
+      setError("Please enter your first name.");
       setStep(1);
       return;
     }
@@ -101,26 +154,37 @@ export default function OnboardingPage() {
       return;
     }
 
-    // 1) Create org
-    const { data: org, error: orgErr } = await supabase
-      .from("orgs")
-      .insert({ name: trimmedCompanyName })
-      .select("id")
+    // Fetch org_id (org should exist already)
+    const { data: profile, error: profFetchErr } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", user.id)
       .single();
 
-    if (orgErr || !org) {
+    if (profFetchErr || !profile?.org_id) {
       setLoading(false);
-      setError(orgErr?.message ?? "Failed to create org.");
+      setError(profFetchErr?.message ?? "Missing org for user.");
       return;
     }
 
-    // 2) Attach user profile to org and save personal info
+    // 1) Update org name (no insert)
+    const { error: orgErr } = await supabase
+      .from("orgs")
+      .update({ name: trimmedCompanyName })
+      .eq("id", profile.org_id);
+
+    if (orgErr) {
+      setLoading(false);
+      setError(orgErr.message);
+      return;
+    }
+
+    // 2) Update profile personal info
     const { error: profErr } = await supabase
       .from("profiles")
       .update({
-        org_id: org.id,
         first_name: trimmedFirstName,
-        last_name: trimmedLastName,
+        last_name: trimmedLastName || null,
       })
       .eq("id", user.id);
 
@@ -147,6 +211,7 @@ export default function OnboardingPage() {
             Step {step} of 2: {step === 1 ? "Personal info" : "Company info"}
           </CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-4">
           {error && (
             <Alert>
@@ -216,8 +281,9 @@ export default function OnboardingPage() {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Button className="flex-1" onClick={createOrgAndAttach} disabled={loading}>
-                  {loading ? "Creating..." : "Create workspace"}
+
+                <Button className="flex-1" onClick={saveOnboarding} disabled={loading}>
+                  {loading ? "Saving..." : "Create workspace"}
                 </Button>
               </div>
             </>
