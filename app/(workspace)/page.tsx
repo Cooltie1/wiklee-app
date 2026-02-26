@@ -24,7 +24,6 @@ function getCategoryName(category: TicketRow["ticket_categories"]) {
 }
 
 export default function TicketsPage() {
-  const [firstName, setFirstName] = useState<string | null>(null);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,21 +41,6 @@ export default function TicketsPage() {
     async function loadWorkspaceData() {
       setLoading(true);
       setError(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      const user = userData.user;
-
-      if (userError || !user) {
-        setFirstName(null);
-      } else {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("first_name")
-          .eq("id", user.id)
-          .single();
-
-        setFirstName(profile?.first_name?.trim() || null);
-      }
 
       const { data: ticketData, error: ticketError } = await supabase
         .from("tickets")
@@ -80,7 +64,7 @@ export default function TicketsPage() {
   return (
     <section className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
       <div>
-        <h2 className="text-4xl font-bold">Hi, {firstName ?? "User"}</h2>
+        <h2 className="text-4xl font-bold">Open Tickets</h2>
       </div>
 
       <div className="overflow-auto rounded-2xl border border-zinc-200 p-4">
