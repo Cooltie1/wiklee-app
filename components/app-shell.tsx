@@ -14,6 +14,7 @@ import {
   Hexagon,
   ChevronDown,
   LogOut,
+  UserCog,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -181,6 +182,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/profile">
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Profile Settings
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut} disabled={signingOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     {signingOut ? "Signing out..." : "Sign out"}
