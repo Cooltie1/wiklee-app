@@ -1,39 +1,39 @@
-const tickets = [
-  {
-    id: "TKT-1041",
-    subject: "Login loop after password reset",
-    status: "In Progress",
-    priority: "High",
-    assignee: "Jane Doe",
-    updated: "2h ago",
-  },
-  {
-    id: "TKT-1038",
-    subject: "Exported reports missing rows",
-    status: "Open",
-    priority: "Medium",
-    assignee: "John Smith",
-    updated: "5h ago",
-  },
-  {
-    id: "TKT-1035",
-    subject: "Unable to invite teammate",
-    status: "Pending",
-    priority: "Low",
-    assignee: "Freddy Mercury",
-    updated: "1d ago",
-  },
-  {
-    id: "TKT-1032",
-    subject: "Mobile layout overlap in ticket detail",
-    status: "Resolved",
-    priority: "Medium",
-    assignee: "Alex Johnson",
-    updated: "2d ago",
-  },
-];
+import { supabase } from "@/lib/supabase";
 
-export default function TicketsPage() {
+type TicketRow = {
+  id: string;
+  ticket_number: number;
+  title: string;
+  created_at: string;
+  ticket_statuses: { label: string } | null;
+  ticket_categories: { name: string } | null;
+};
+
+const createdAtFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+function formatCreatedAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return createdAtFormatter.format(date);
+}
+
+export default async function TicketsPage() {
+  const { data: tickets, error } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_number, title, created_at, ticket_statuses(label), ticket_categories(name)"
+    )
+    .order("created_at", { ascending: false });
+
+  const rows: TicketRow[] = tickets ?? [];
+
   return (
     <section className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
       <div>
@@ -42,30 +42,34 @@ export default function TicketsPage() {
       </div>
 
       <div className="overflow-auto rounded-2xl border border-zinc-200 p-4">
-        <table className="w-full table-fixed text-left">
-          <thead>
-            <tr className="border-b border-zinc-200 text-zinc-500">
-              <th className="py-3">Ticket</th>
-              <th className="py-3">Subject</th>
-              <th className="py-3">Status</th>
-              <th className="py-3">Priority</th>
-              <th className="py-3">Assignee</th>
-              <th className="py-3">Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tickets.map((ticket) => (
-              <tr key={ticket.id} className="border-b border-zinc-100 last:border-b-0">
-                <td className="py-4 font-medium">{ticket.id}</td>
-                <td className="py-4">{ticket.subject}</td>
-                <td className="py-4">{ticket.status}</td>
-                <td className="py-4">{ticket.priority}</td>
-                <td className="py-4">{ticket.assignee}</td>
-                <td className="py-4">{ticket.updated}</td>
+        {error ? (
+          <p className="text-sm text-red-600">Unable to load tickets right now.</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-zinc-500">No tickets found.</p>
+        ) : (
+          <table className="w-full table-fixed text-left">
+            <thead>
+              <tr className="border-b border-zinc-200 text-zinc-500">
+                <th className="py-3">Ticket Number</th>
+                <th className="py-3">Title</th>
+                <th className="py-3">Status</th>
+                <th className="py-3">Category</th>
+                <th className="py-3">Created At</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((ticket) => (
+                <tr key={ticket.id} className="border-b border-zinc-100 last:border-b-0">
+                  <td className="py-4 font-medium">{ticket.ticket_number}</td>
+                  <td className="py-4">{ticket.title}</td>
+                  <td className="py-4">{ticket.ticket_statuses?.label ?? "—"}</td>
+                  <td className="py-4">{ticket.ticket_categories?.name ?? "Uncategorized"}</td>
+                  <td className="py-4">{formatCreatedAt(ticket.created_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </section>
   );
