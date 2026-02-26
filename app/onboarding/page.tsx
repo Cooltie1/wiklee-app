@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AvatarUploader } from "@/components/AvatarUploader";
 import { ArrowLeft } from "lucide-react";
 
 export default function OnboardingPage() {
@@ -18,6 +19,8 @@ export default function OnboardingPage() {
   const [lastName, setLastName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [step, setStep] = useState(1);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,7 @@ export default function OnboardingPage() {
 
       const { data: profile, error: profileErr } = await supabase
         .from("profiles")
-        .select("org_id, first_name, last_name")
+        .select("org_id, first_name, last_name, avatar_path")
         .eq("id", userData.user.id)
         .single();
 
@@ -50,6 +53,8 @@ export default function OnboardingPage() {
 
       setFirstName(profile?.first_name ?? "");
       setLastName(profile?.last_name ?? "");
+      setAvatarPath(profile?.avatar_path ?? null);
+      setUserId(userData.user.id);
       setChecking(false);
     })();
   }, [router]);
@@ -152,6 +157,18 @@ export default function OnboardingPage() {
           {step === 1 ? (
             <>
               <div className="space-y-2">
+                {userId ? (
+                  <div className="flex justify-center pb-1">
+                    <AvatarUploader
+                      userId={userId}
+                      name={`${firstName} ${lastName}`.trim()}
+                      avatarPath={avatarPath}
+                      sizeClassName="h-24 w-24"
+                      onAvatarUpdated={setAvatarPath}
+                    />
+                  </div>
+                ) : null}
+
                 <Label htmlFor="firstName">First name</Label>
                 <Input
                   id="firstName"

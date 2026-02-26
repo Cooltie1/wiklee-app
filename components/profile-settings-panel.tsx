@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AvatarUploader } from "@/components/AvatarUploader";
-import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +27,6 @@ export function ProfileSettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [avatarRefreshKey, setAvatarRefreshKey] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -105,12 +103,14 @@ export function ProfileSettingsPanel() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <UserAvatar
+        <AvatarUploader
           userId={profile.id}
           name={displayName}
           avatarPath={profile.avatarPath}
-          className="h-14 w-14"
-          refreshKey={avatarRefreshKey}
+          sizeClassName="h-24 w-24"
+          onAvatarUpdated={(nextAvatarPath) => {
+            setProfile((prev) => (prev ? { ...prev, avatarPath: nextAvatarPath } : prev));
+          }}
         />
         <div>
           <p className="font-medium">{displayName}</p>
@@ -151,15 +151,6 @@ export function ProfileSettingsPanel() {
 
         {saveMessage ? <p className="text-sm text-emerald-600">{saveMessage}</p> : null}
       </div>
-
-      <AvatarUploader
-        userId={profile.id}
-        avatarPath={profile.avatarPath}
-        onAvatarUpdated={(nextAvatarPath) => {
-          setProfile((prev) => (prev ? { ...prev, avatarPath: nextAvatarPath } : prev));
-          setAvatarRefreshKey((value) => value + 1);
-        }}
-      />
     </div>
   );
 }
