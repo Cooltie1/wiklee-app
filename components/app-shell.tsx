@@ -26,6 +26,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { UserAvatar } from "@/components/UserAvatar";
+
+type CurrentUserProfile = {
+  id: string;
+  name: string;
+  avatarPath: string | null;
+};
 
 const navItems = [
   { href: "/", label: "Tickets", icon: FolderKanban },
@@ -47,6 +54,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUserProfile | null>(null);
 
   const isUsersPage = pathname === "/users" || pathname.startsWith("/users/") || pathname === "/team" || pathname.startsWith("/team/");
   const createButtonLabel = isUsersPage ? "+ Create User" : "+ Create Ticket";
@@ -64,7 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("org_id")
+        .select("org_id, first_name, last_name, avatar_path")
         .eq("id", user.id)
         .single();
 
@@ -78,6 +86,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         router.replace("/onboarding");
         return;
       }
+
+      const name = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user.email || "User";
+
+      setCurrentUser({
+        id: user.id,
+        name,
+        avatarPath: profile.avatar_path ?? null,
+      });
 
       setChecking(false);
     })();
@@ -172,14 +188,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    aria-label="Open profile menu"
-                  >
-                    <Hexagon className="h-4 w-4" />
-                  </Button>
+                  <button type="button" className="rounded-full" aria-label="Open profile menu">
+                    {currentUser ? (
+                      <UserAvatar
+                        userId={currentUser.id}
+                        name={currentUser.name}
+                        avatarPath={currentUser.avatarPath}
+                        className="h-8 w-8 border"
+                      />
+                    ) : (
+                      <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-full">
+                        <Hexagon className="h-4 w-4" />
+                      </div>
+                    )}
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>

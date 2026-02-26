@@ -1,3 +1,4 @@
+import { ProfileSettingsPanel } from "@/components/profile-settings-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SettingsProfilePage() {
@@ -14,7 +15,7 @@ export default function SettingsProfilePage() {
           <CardDescription>Update your name, avatar, and personal workspace preferences.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Coming soon.</p>
+          <ProfileSettingsPanel />
         </CardContent>
       </Card>
     </section>
