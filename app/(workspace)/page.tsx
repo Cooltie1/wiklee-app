@@ -34,6 +34,18 @@ export default async function TicketsPage() {
 
   const rows: TicketRow[] = tickets ?? [];
 
+  console.log("[TicketsPage] Returned tickets length:", rows.length);
+  console.log("[TicketsPage] Full ticket objects:", rows);
+
+  if (error) {
+    console.error("[TicketsPage] Supabase tickets query error:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
+  }
+
   return (
     <section className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
       <div>
