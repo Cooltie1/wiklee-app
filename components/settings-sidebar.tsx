@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const settingsNavItems = [
+  { href: "/settings/profile", label: "Profile Settings" },
   { href: "/settings/company", label: "Company Info" },
   { href: "/settings/custom-fields", label: "Custom Fields" },
   { href: "/settings/billing", label: "Billing" },
