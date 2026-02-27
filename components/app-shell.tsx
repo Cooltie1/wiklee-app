@@ -43,7 +43,7 @@ type AvatarUpdatedEventDetail = {
 const navItems = [
   { href: "/", label: "Tickets", icon: FolderKanban },
   { href: "/analytics", label: "Analytics", icon: ChartColumn },
-  { href: "/team", label: "Team", icon: Users },
+  { href: "/users", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
