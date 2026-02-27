@@ -119,18 +119,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const hasFirstName = !!profile?.first_name?.trim();
 
       let hasOrgName = false;
+      let hasOrgSlug = false;
 
       if (profile?.org_id) {
         const { data: org } = await supabase
           .from("orgs")
-          .select("name")
+          .select("name, slug")
           .eq("id", profile.org_id)
           .single();
 
         hasOrgName = !!org?.name?.trim();
+        hasOrgSlug = !!org?.slug?.trim();
       }
 
-      if (!hasFirstName || !hasOrgName) {
+      if (!hasFirstName || !hasOrgName || !hasOrgSlug) {
         router.replace("/onboarding");
         return;
       }

@@ -21,6 +21,7 @@ export default function OnboardingPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [workspaceUrl, setWorkspaceUrl] = useState("");
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
@@ -31,6 +32,7 @@ export default function OnboardingPage() {
   // Skip onboarding ONLY if:
   // - profile.first_name is set
   // - org.name is set
+  // - org.slug is set
   useEffect(() => {
   (async () => {
     console.log("🚀 Onboarding check starting...");
@@ -60,16 +62,15 @@ export default function OnboardingPage() {
     }
 
     let orgName = "";
-    let orgData = null;
+    let orgSlug = "";
 
     if (profile?.org_id) {
       const { data: org, error: orgErr } = await supabase
         .from("orgs")
-        .select("id, name")
+        .select("id, name, slug")
         .eq("id", profile.org_id)
         .single();
 
-      orgData = org;
 
       console.log("🏢 org:", org);
       console.log("🏢 org error:", orgErr);
@@ -81,19 +82,21 @@ export default function OnboardingPage() {
       }
 
       orgName = org?.name ?? "";
+      orgSlug = org?.slug ?? "";
     } else {
       console.log("⚠️ profile has NO org_id");
     }
 
     const hasFirstName = !!profile?.first_name?.trim();
     const hasOrgName = !!orgName.trim();
+    const hasOrgSlug = !!orgSlug.trim();
 
     console.log("🧠 hasFirstName:", hasFirstName);
     console.log("🧠 hasOrgName:", hasOrgName);
     console.log("🧠 raw first_name:", profile?.first_name);
     console.log("🧠 raw orgName:", orgName);
 
-    if (hasFirstName && hasOrgName) {
+    if (hasFirstName && hasOrgName && hasOrgSlug) {
       console.log("✅ Skipping onboarding → redirecting home");
       router.replace("/");
       return;
@@ -105,6 +108,7 @@ export default function OnboardingPage() {
     setLastName(profile?.last_name ?? "");
     setAvatarPath(profile?.avatar_path ?? null);
     setCompanyName(orgName);
+    setWorkspaceUrl(orgSlug);
     setUserId(userData.user.id);
 
     setStep(hasFirstName ? 2 : 1);
@@ -125,6 +129,14 @@ export default function OnboardingPage() {
     setStep(2);
   }
 
+  function sanitizeWorkspaceSlug(value: string) {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
   async function saveOnboarding() {
     setLoading(true);
     setError(null);
@@ -140,6 +152,7 @@ export default function OnboardingPage() {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     const trimmedCompanyName = companyName.trim();
+    const trimmedWorkspaceUrl = sanitizeWorkspaceSlug(workspaceUrl.trim());
 
     if (!trimmedFirstName) {
       setLoading(false);
@@ -151,6 +164,12 @@ export default function OnboardingPage() {
     if (!trimmedCompanyName) {
       setLoading(false);
       setError("Please enter a company name.");
+      return;
+    }
+
+    if (!trimmedWorkspaceUrl) {
+      setLoading(false);
+      setError("Please enter a workspace URL.");
       return;
     }
 
@@ -170,7 +189,7 @@ export default function OnboardingPage() {
     // 1) Update org name (no insert)
     const { error: orgErr } = await supabase
       .from("orgs")
-      .update({ name: trimmedCompanyName })
+      .update({ name: trimmedCompanyName, slug: trimmedWorkspaceUrl })
       .eq("id", profile.org_id);
 
     if (orgErr) {
@@ -267,6 +286,20 @@ export default function OnboardingPage() {
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="workspaceUrl">Workspace URL</Label>
+                <div className="flex items-center rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
+                  <Input
+                    id="workspaceUrl"
+                    placeholder="acme"
+                    value={workspaceUrl}
+                    onChange={(e) => setWorkspaceUrl(sanitizeWorkspaceSlug(e.target.value))}
+                    className="border-0 shadow-none focus-visible:ring-0"
+                  />
+                  <span className="px-3 text-sm text-muted-foreground">.wiklee.com</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

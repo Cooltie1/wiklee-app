@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CompanySettingsPanel } from "@/components/company-settings-panel";
 
 export default function SettingsCompanyPage() {
   return (
@@ -11,10 +12,10 @@ export default function SettingsCompanyPage() {
       <Card>
         <CardHeader>
           <CardTitle>Company profile</CardTitle>
-          <CardDescription>Update your company name, support email, and related metadata.</CardDescription>
+          <CardDescription>Update your company name and workspace URL.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Coming soon.</p>
+          <CompanySettingsPanel />
         </CardContent>
       </Card>
     </section>
