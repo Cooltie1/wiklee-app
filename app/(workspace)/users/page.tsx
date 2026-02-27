@@ -150,7 +150,7 @@ export default function UsersPage() {
   const filterButtonClassName = (isSelected: boolean) =>
     `rounded-full border shadow-xs ${
       isSelected
-        ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+        ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
         : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
     }`;
 
