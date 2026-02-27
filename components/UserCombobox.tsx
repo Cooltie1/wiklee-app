@@ -116,10 +116,15 @@ export function UserCombobox({
                   <CommandItem
                     value={topAction.label}
                     onSelect={() => {
+                      if (topAction.active) return
                       topAction.onSelect()
                       setOpen(false)
                     }}
-                    className={cn(topAction.active ? "text-emerald-600" : undefined)}
+                    className={cn(
+                      topAction.active
+                        ? "bg-emerald-500 text-black data-[selected=true]:bg-emerald-500 data-[selected=true]:text-black"
+                        : undefined
+                    )}
                   >
                     <Check className={cn("size-4", topAction.active ? "opacity-100" : "opacity-0")} />
                     <span>{topAction.label}</span>
