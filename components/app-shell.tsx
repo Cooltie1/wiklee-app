@@ -193,7 +193,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
         </aside>
 
-        <div className="grid h-full grid-rows-[60px_1fr] overflow-hidden">
+        <div className="grid h-full min-h-0 grid-rows-[60px_1fr] overflow-hidden">
           <header className="sticky top-0 flex items-center justify-between border-b px-4">
             <div className="flex items-center gap-1">
               <Button asChild className="h-9 rounded-sm rounded-l-full px-4">
@@ -269,7 +269,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="h-full overflow-hidden p-6">{children}</main>
+          <main className="h-full min-h-0 overflow-y-auto overflow-x-hidden p-6">{children}</main>
         </div>
       </div>
     </div>
