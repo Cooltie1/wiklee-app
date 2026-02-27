@@ -119,7 +119,11 @@ export function UserCombobox({
                       topAction.onSelect()
                       setOpen(false)
                     }}
-                    className={cn(topAction.active ? "text-emerald-600" : undefined)}
+                    className={cn(
+                      topAction.active
+                        ? "bg-emerald-200 text-black hover:bg-emerald-200 active:bg-emerald-200 data-[selected=true]:bg-emerald-200 data-[selected=true]:text-black"
+                        : undefined
+                    )}
                   >
                     <Check className={cn("size-4", topAction.active ? "opacity-100" : "opacity-0")} />
                     <span>{topAction.label}</span>
