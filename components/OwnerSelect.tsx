@@ -31,7 +31,7 @@ export function OwnerSelect({
           value={value}
           onValueChange={onChange}
           placeholder="Unassigned"
-          searchPlaceholder="Search owners..."
+          searchPlaceholder="Search agents..."
           emptyText="No users found"
           disabled={disabled}
           topAction={{
