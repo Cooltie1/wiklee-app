@@ -27,11 +27,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
+import { AVATAR_UPDATED_EVENT } from "@/components/AvatarUploader";
 
 type CurrentUserProfile = {
   id: string;
   name: string;
   avatarPath: string | null;
+};
+
+type AvatarUpdatedEventDetail = {
+  userId: string;
+  avatarPath: string;
 };
 
 const navItems = [
@@ -59,6 +65,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isUsersPage = pathname === "/users" || pathname.startsWith("/users/") || pathname === "/team" || pathname.startsWith("/team/");
   const createButtonLabel = isUsersPage ? "+ Create User" : "+ Create Ticket";
   const createButtonHref = isUsersPage ? "/users/new" : "/tickets/new";
+
+  useEffect(() => {
+    function handleAvatarUpdated(event: Event) {
+      const customEvent = event as CustomEvent<AvatarUpdatedEventDetail>;
+      const detail = customEvent.detail;
+
+      if (!detail?.userId || !detail?.avatarPath) {
+        return;
+      }
+
+      setCurrentUser((prev) => {
+        if (!prev || prev.id !== detail.userId) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          avatarPath: detail.avatarPath,
+        };
+      });
+    }
+
+    window.addEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {

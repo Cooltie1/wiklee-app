@@ -16,6 +16,13 @@ type AvatarUploaderProps = {
   onAvatarUpdated?: (nextAvatarPath: string) => void;
 };
 
+export const AVATAR_UPDATED_EVENT = "profile-avatar-updated";
+
+type AvatarUpdatedEventDetail = {
+  userId: string;
+  avatarPath: string;
+};
+
 function getFileExtension(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase();
   if (fromName) {
@@ -44,7 +51,7 @@ export function AvatarUploader({
   name,
   avatarPath,
   sizeClassName = "h-24 w-24",
-  tooltipText = "Upload profile photo",
+  tooltipText = "Upload profile picture",
   onAvatarUpdated,
 }: AvatarUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -123,6 +130,18 @@ export function AvatarUploader({
 
     invalidateAvatarUrlCache(avatarPath);
     invalidateAvatarUrlCache(nextAvatarPath);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent<AvatarUpdatedEventDetail>(AVATAR_UPDATED_EVENT, {
+          detail: {
+            userId,
+            avatarPath: nextAvatarPath,
+          },
+        }),
+      );
+    }
+
     onAvatarUpdated?.(nextAvatarPath);
     setIsUploading(false);
   }
