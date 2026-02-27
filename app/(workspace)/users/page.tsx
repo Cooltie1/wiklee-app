@@ -14,6 +14,8 @@ type ProfileRow = {
   updated_at: string | null;
 };
 
+type FilterOption = "everyone" | "agents" | "users";
+
 function getDisplayName(profile: Pick<ProfileRow, "first_name" | "last_name">) {
   const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
   return fullName || "Unknown User";
@@ -66,8 +68,7 @@ export default function UsersPage() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAgents, setShowAgents] = useState(true);
-  const [showUsers, setShowUsers] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState<FilterOption>("everyone");
 
   useEffect(() => {
     let isMounted = true;
@@ -135,28 +136,16 @@ export default function UsersPage() {
     };
   }, []);
 
-  function toggleAgents() {
-    if (showAgents && !showUsers) {
-      return;
-    }
-
-    setShowAgents((prev) => !prev);
-  }
-
-  function toggleUsers() {
-    if (showUsers && !showAgents) {
-      return;
-    }
-
-    setShowUsers((prev) => !prev);
-  }
-
   const filteredProfiles = useMemo(() => {
+    if (selectedFilter === "everyone") {
+      return profiles;
+    }
+
     return profiles.filter((profile) => {
       const isAgent = profile.role?.toLowerCase() === "agent";
-      return isAgent ? showAgents : showUsers;
+      return selectedFilter === "agents" ? isAgent : !isAgent;
     });
-  }, [profiles, showAgents, showUsers]);
+  }, [profiles, selectedFilter]);
 
   return (
     <section className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
@@ -166,22 +155,34 @@ export default function UsersPage() {
           <p className="text-sm text-zinc-500">Manage users and agents in one place.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="radiogroup" aria-label="Filter users by role">
           <Button
             type="button"
-            onClick={toggleAgents}
-            variant={showAgents ? "default" : "outline"}
+            onClick={() => setSelectedFilter("everyone")}
+            variant={selectedFilter === "everyone" ? "default" : "outline"}
             className="rounded-full"
-            aria-pressed={showAgents}
+            role="radio"
+            aria-checked={selectedFilter === "everyone"}
+          >
+            Everyone
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setSelectedFilter("agents")}
+            variant={selectedFilter === "agents" ? "default" : "outline"}
+            className="rounded-full"
+            role="radio"
+            aria-checked={selectedFilter === "agents"}
           >
             Agents
           </Button>
           <Button
             type="button"
-            onClick={toggleUsers}
-            variant={showUsers ? "default" : "outline"}
+            onClick={() => setSelectedFilter("users")}
+            variant={selectedFilter === "users" ? "default" : "outline"}
             className="rounded-full"
-            aria-pressed={showUsers}
+            role="radio"
+            aria-checked={selectedFilter === "users"}
           >
             Users
           </Button>
@@ -194,7 +195,7 @@ export default function UsersPage() {
         ) : error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : filteredProfiles.length === 0 ? (
-          <p className="text-sm text-zinc-500">No users found for the selected filters.</p>
+          <p className="text-sm text-zinc-500">No users found for the selected filter.</p>
         ) : (
           <table className="w-full table-fixed text-left">
             <thead>
