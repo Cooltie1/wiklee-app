@@ -127,7 +127,7 @@ export function CompanySettingsPanel() {
     return <p className="text-sm text-muted-foreground">Loading company info...</p>;
   }
 
-  if (error || !company) {
+  if (!company) {
     return <p className="text-sm text-destructive">{error ?? "Unable to load company info."}</p>;
   }
 
@@ -141,6 +141,7 @@ export function CompanySettingsPanel() {
           onChange={(event) => {
             setCompany((prev) => (prev ? { ...prev, companyName: event.target.value } : prev));
             setSaveMessage(null);
+            setError(null);
           }}
           disabled={saving}
           placeholder="Acme Inc"
@@ -157,6 +158,7 @@ export function CompanySettingsPanel() {
               const nextWorkspaceUrl = sanitizeWorkspaceSlug(event.target.value);
               setCompany((prev) => (prev ? { ...prev, workspaceUrl: nextWorkspaceUrl } : prev));
               setSaveMessage(null);
+              setError(null);
             }}
             disabled={saving}
             className="border-0 shadow-none focus-visible:ring-0"
@@ -170,8 +172,8 @@ export function CompanySettingsPanel() {
         {saving ? "Saving..." : "Save company info"}
       </Button>
 
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {saveMessage ? <p className="text-sm text-emerald-600">{saveMessage}</p> : null}
-      {!saveMessage ? <p className="text-sm text-muted-foreground">Preview: {company.workspaceUrl || "workspace"}.wiklee.com</p> : null}
     </div>
   );
 }
