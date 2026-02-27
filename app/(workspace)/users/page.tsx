@@ -111,7 +111,7 @@ export default function UsersPage() {
         .from("profiles")
         .select("id, first_name, last_name, email, role, updated_at")
         .eq("org_id", currentProfile.org_id)
-        .order("updated_at", { ascending: false });
+        .order("first_name", { ascending: true });
 
       if (!isMounted) {
         return;
