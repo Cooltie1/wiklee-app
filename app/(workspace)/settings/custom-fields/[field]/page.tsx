@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CategorySettingsTable } from "@/components/category-settings-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type FieldConfig = {
@@ -27,12 +28,16 @@ const systemFieldDetails: Record<string, FieldConfig> = {
   },
 };
 
-export default function SystemFieldPage({ params }: { params: { field: string } }) {
-  const { field } = params;
+export default async function SystemFieldPage({ params }: { params: Promise<{ field: string }> }) {
+  const { field } = await params;
   const fieldConfig = systemFieldDetails[field];
 
   if (!fieldConfig) {
     notFound();
+  }
+
+  if (field === "category") {
+    return <CategorySettingsTable />;
   }
 
   return (
