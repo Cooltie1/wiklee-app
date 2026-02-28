@@ -22,7 +22,6 @@ type CreateCategoryModalProps = {
   onClose: () => void;
   defaultName?: string;
   defaultDescription?: string;
-  defaultColor?: string;
   onCreated?: (category: TicketCategoryRow) => void;
 };
 
@@ -36,7 +35,6 @@ export function CreateCategoryModal({
   onClose,
   defaultName,
   defaultDescription,
-  defaultColor,
   onCreated,
 }: CreateCategoryModalProps) {
   const [name, setName] = useState(defaultName ?? "");
@@ -99,10 +97,9 @@ export function CreateCategoryModal({
         org_id: profile.org_id,
         name: trimmedName,
         description: normalizeOptional(description),
-        color: normalizeOptional(defaultColor ?? ""),
         sort_order: 0,
       })
-      .select("id, org_id, name, description, color, sort_order, created_at")
+      .select("id, org_id, name, description, sort_order, created_at")
       .single();
 
     setIsSubmitting(false);

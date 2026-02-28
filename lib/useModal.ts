@@ -7,7 +7,6 @@ export type TicketCategoryRow = {
   org_id: string;
   name: string;
   description: string | null;
-  color: string | null;
   sort_order: number;
   created_at: string;
 };
@@ -16,7 +15,6 @@ export type ModalRegistry = {
   createCategory: {
     defaultName?: string;
     defaultDescription?: string;
-    defaultColor?: string;
     onCreated?: (category: TicketCategoryRow) => void;
   };
 };
