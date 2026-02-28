@@ -16,7 +16,6 @@ export type ModalRegistry = {
   createCategory: {
     defaultName?: string;
     defaultDescription?: string;
-    defaultSortOrder?: number;
     defaultColor?: string;
     onCreated?: (category: TicketCategoryRow) => void;
   };

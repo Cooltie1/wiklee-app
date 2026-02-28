@@ -22,7 +22,6 @@ type CreateCategoryModalProps = {
   onClose: () => void;
   defaultName?: string;
   defaultDescription?: string;
-  defaultSortOrder?: number;
   defaultColor?: string;
   onCreated?: (category: TicketCategoryRow) => void;
 };
@@ -37,15 +36,12 @@ export function CreateCategoryModal({
   onClose,
   defaultName,
   defaultDescription,
-  defaultSortOrder,
   defaultColor,
   onCreated,
 }: CreateCategoryModalProps) {
   const [name, setName] = useState(defaultName ?? "");
   const [description, setDescription] = useState(defaultDescription ?? "");
-  const [sortOrder, setSortOrder] = useState((defaultSortOrder ?? 0).toString());
   const [nameError, setNameError] = useState("");
-  const [sortOrderError, setSortOrderError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,20 +57,13 @@ export function CreateCategoryModal({
     event.preventDefault();
 
     const trimmedName = name.trim();
-    const parsedSortOrder = Number.parseInt(sortOrder, 10);
 
     let hasError = false;
     setNameError("");
-    setSortOrderError("");
     setSubmitError("");
 
     if (!trimmedName) {
       setNameError("Name is required");
-      hasError = true;
-    }
-
-    if (Number.isNaN(parsedSortOrder)) {
-      setSortOrderError("Sort order must be a number");
       hasError = true;
     }
 
@@ -111,7 +100,7 @@ export function CreateCategoryModal({
         name: trimmedName,
         description: normalizeOptional(description),
         color: normalizeOptional(defaultColor ?? ""),
-        sort_order: parsedSortOrder,
+        sort_order: 0,
       })
       .select("id, org_id, name, description, color, sort_order, created_at")
       .single();
@@ -133,7 +122,6 @@ export function CreateCategoryModal({
 
     setName(defaultName ?? "");
     setDescription(defaultDescription ?? "");
-    setSortOrder((defaultSortOrder ?? 0).toString());
     setSubmitError("");
     onClose();
   };
@@ -163,17 +151,6 @@ export function CreateCategoryModal({
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Optional"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category-sort-order">Sort order</Label>
-            <Input
-              id="category-sort-order"
-              type="number"
-              value={sortOrder}
-              onChange={(event) => setSortOrder(event.target.value)}
-            />
-            {sortOrderError ? <p className="text-xs text-red-600">{sortOrderError}</p> : null}
           </div>
 
           <DialogFooter>
