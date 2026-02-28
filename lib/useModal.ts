@@ -13,9 +13,11 @@ export type TicketCategoryRow = {
 
 export type ModalRegistry = {
   createCategory: {
+    categoryId?: string;
     defaultName?: string;
     defaultDescription?: string;
     onCreated?: (category: TicketCategoryRow) => void;
+    onUpdated?: (category: TicketCategoryRow) => void;
   };
 };
 
