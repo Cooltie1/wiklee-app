@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Label } from "@/components/ui/label";
@@ -102,7 +103,8 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
           allowClear
           clearLabel="None"
           action={{
-            label: "+ New category",
+            label: "Edit",
+            icon: Pencil,
             onClick: () =>
               openModal("createCategory", {
                 onCreated: handleCategoryCreated,

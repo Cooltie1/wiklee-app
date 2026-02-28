@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
-import { GripVertical, MoreHorizontal } from "lucide-react";
+import { GripVertical, MoreHorizontal, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabaseClient";
+import { useModal, type TicketCategoryRow } from "@/lib/useModal";
 
 type TicketCategory = {
   id: string;
@@ -30,6 +31,7 @@ function orderCategories(categories: TicketCategory[]) {
 }
 
 export function CategorySettingsTable() {
+  const { openModal } = useModal();
   const [categories, setCategories] = useState<TicketCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -95,6 +97,20 @@ export function CategorySettingsTable() {
 
   const isEmpty = useMemo(() => !loading && !errorMessage && categories.length === 0, [categories.length, errorMessage, loading]);
 
+  const handleCategoryCreated = (category: TicketCategoryRow) => {
+    setCategories((current) =>
+      orderCategories([
+        ...current,
+        {
+          id: category.id,
+          name: category.name,
+          description: category.description,
+          sort_order: category.sort_order,
+        },
+      ])
+    );
+  };
+
   const persistOrder = async (orderedCategories: TicketCategory[]) => {
     setSavingOrder(true);
 
@@ -152,9 +168,22 @@ export function CategorySettingsTable() {
         </ol>
       </nav>
 
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Category</h1>
-        <p className="text-sm text-muted-foreground">Manage category labels and drag rows to change the display order.</p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Category</h1>
+          <p className="text-sm text-muted-foreground">Manage category labels and drag rows to change the display order.</p>
+        </div>
+        <Button
+          type="button"
+          onClick={() =>
+            openModal("createCategory", {
+              onCreated: handleCategoryCreated,
+            })
+          }
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+          Create Category
+        </Button>
       </header>
 
       <Card>

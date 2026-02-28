@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -27,6 +27,7 @@ type LookupDropdownProps<T extends LookupItem> = {
   clearLabel?: string;
   action?: {
     label: string;
+    icon?: LucideIcon;
     onClick: () => void;
   };
 };
@@ -119,6 +120,7 @@ export function LookupDropdown<T extends LookupItem>({
                 setOpen(false);
               }}
             >
+              {action.icon ? <action.icon className="mr-2 h-4 w-4" aria-hidden="true" /> : null}
               {action.label}
             </Button>
           </div>
