@@ -20,9 +20,11 @@ import type { TicketCategoryRow } from "@/lib/useModal";
 type CreateCategoryModalProps = {
   open: boolean;
   onClose: () => void;
+  categoryId?: string;
   defaultName?: string;
   defaultDescription?: string;
   onCreated?: (category: TicketCategoryRow) => void;
+  onUpdated?: (category: TicketCategoryRow) => void;
 };
 
 function normalizeOptional(value: string) {
@@ -33,15 +35,18 @@ function normalizeOptional(value: string) {
 export function CreateCategoryModal({
   open,
   onClose,
+  categoryId,
   defaultName,
   defaultDescription,
   onCreated,
+  onUpdated,
 }: CreateCategoryModalProps) {
   const [name, setName] = useState(defaultName ?? "");
   const [description, setDescription] = useState(defaultDescription ?? "");
   const [nameError, setNameError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditing = Boolean(categoryId);
 
   const handleCancel = () => {
     if (isSubmitting) {
@@ -91,30 +96,50 @@ export function CreateCategoryModal({
       return;
     }
 
-    const { data: created, error: insertError } = await supabase
-      .from("ticket_categories")
-      .insert({
-        org_id: profile.org_id,
-        name: trimmedName,
-        description: normalizeOptional(description),
-        sort_order: 0,
-      })
-      .select("id, org_id, name, description, sort_order, created_at")
-      .single();
+    const categoryPayload = {
+      name: trimmedName,
+      description: normalizeOptional(description),
+    };
+
+    const request = isEditing
+      ? supabase
+          .from("ticket_categories")
+          .update(categoryPayload)
+          .eq("id", categoryId)
+          .eq("org_id", profile.org_id)
+          .select("id, org_id, name, description, sort_order, created_at")
+          .single()
+      : supabase
+          .from("ticket_categories")
+          .insert({
+            ...categoryPayload,
+            org_id: profile.org_id,
+            sort_order: 0,
+          })
+          .select("id, org_id, name, description, sort_order, created_at")
+          .single();
+
+    const { data: savedCategory, error: saveError } = await request;
 
     setIsSubmitting(false);
 
-    if (insertError) {
-      if (insertError.code === "23505") {
+    if (saveError) {
+      if (saveError.code === "23505") {
         setSubmitError("A category with that name already exists");
       } else {
-        setSubmitError(insertError.message || "Unable to create category");
+        setSubmitError(saveError.message || `Unable to ${isEditing ? "update" : "create"} category`);
       }
       return;
     }
 
-    if (created) {
-      onCreated?.(created as TicketCategoryRow);
+    if (savedCategory) {
+      const category = savedCategory as TicketCategoryRow;
+
+      if (isEditing) {
+        onUpdated?.(category);
+      } else {
+        onCreated?.(category);
+      }
     }
 
     setName(defaultName ?? "");
@@ -127,8 +152,12 @@ export function CreateCategoryModal({
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? handleCancel() : undefined)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Category</DialogTitle>
-          <DialogDescription>Create a category to organize tickets for your team.</DialogDescription>
+          <DialogTitle>{isEditing ? "Edit Category" : "Create Category"}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Update the category details used to organize tickets for your team."
+              : "Create a category to organize tickets for your team."}
+          </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -155,7 +184,7 @@ export function CreateCategoryModal({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Category"}
+              {isSubmitting ? (isEditing ? "Saving..." : "Creating...") : isEditing ? "Save Changes" : "Create Category"}
             </Button>
           </DialogFooter>
         </form>
