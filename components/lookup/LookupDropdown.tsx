@@ -25,6 +25,10 @@ type LookupDropdownProps<T extends LookupItem> = {
   disabled?: boolean;
   allowClear?: boolean;
   clearLabel?: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 };
 
 export function LookupDropdown<T extends LookupItem>({
@@ -40,6 +44,7 @@ export function LookupDropdown<T extends LookupItem>({
   disabled,
   allowClear,
   clearLabel = "None",
+  action,
 }: LookupDropdownProps<T>) {
   const [open, setOpen] = useState(false);
 
@@ -103,6 +108,21 @@ export function LookupDropdown<T extends LookupItem>({
             ) : null}
           </CommandList>
         </Command>
+        {action ? (
+          <div className="border-t p-1">
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                action.onClick();
+                setOpen(false);
+              }}
+            >
+              {action.label}
+            </Button>
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   );
