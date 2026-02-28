@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
-import { Ban, GripVertical, MoreHorizontal, Pencil, Power } from "lucide-react";
+import { Ban, GripVertical, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,6 +162,9 @@ export function CategorySettingsTable() {
     );
   };
 
+  const handleCategoryDeleted = (categoryId: string) => {
+    setCategories((current) => current.filter((category) => category.id !== categoryId));
+  };
 
   const handleCategoryActivated = async (categoryId: string) => {
     setStatusUpdatingId(categoryId);
@@ -390,16 +393,31 @@ export function CategorySettingsTable() {
                               Deactivate
                             </DropdownMenuItem>
                           ) : (
-                            <DropdownMenuItem
-                              className="text-emerald-700 focus:text-emerald-700"
-                              disabled={statusUpdatingId === category.id}
-                              onSelect={() => {
-                                void handleCategoryActivated(category.id);
-                              }}
-                            >
-                              <Power className="mr-2 h-4 w-4" aria-hidden="true" />
-                              {statusUpdatingId === category.id ? "Activating..." : "Activate"}
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem
+                                className="text-emerald-700 focus:text-emerald-700"
+                                disabled={statusUpdatingId === category.id}
+                                onSelect={() => {
+                                  void handleCategoryActivated(category.id);
+                                }}
+                              >
+                                <Power className="mr-2 h-4 w-4" aria-hidden="true" />
+                                {statusUpdatingId === category.id ? "Activating..." : "Activate"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onSelect={() => {
+                                  openModal("deleteCategory", {
+                                    categoryId: category.id,
+                                    categoryName: category.name,
+                                    onDeleted: handleCategoryDeleted,
+                                  });
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>

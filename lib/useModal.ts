@@ -25,6 +25,11 @@ export type ModalRegistry = {
     categoryName: string;
     onDeactivated?: (categoryId: string) => void;
   };
+  deleteCategory: {
+    categoryId: string;
+    categoryName: string;
+    onDeleted?: (categoryId: string) => void;
+  };
 };
 
 type ActiveModal = {
