@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { OwnerSelect } from "@/components/OwnerSelect";
 import { RequesterSelect } from "@/components/RequesterSelect";
+import { CategorySelect } from "@/components/lookup/CategorySelect";
+import { PrioritySelect } from "@/components/lookup/PrioritySelect";
 import type { ComboboxUser } from "@/components/UserCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +40,8 @@ export default function NewTicketPage() {
   const [ownerUsers, setOwnerUsers] = useState<ComboboxUser[]>([]);
   const [requesterId, setRequesterId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [priorityId, setPriorityId] = useState<string | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [requesterLoadError, setRequesterLoadError] = useState("");
   const [ownerLoadError, setOwnerLoadError] = useState("");
@@ -182,6 +186,8 @@ export default function NewTicketPage() {
       description,
       requester_id: resolvedRequesterId,
       owner_id: ownerId,
+      category_id: categoryId,
+      priority_id: priorityId,
     });
 
     setIsSaving(false);
@@ -243,9 +249,13 @@ export default function NewTicketPage() {
           disabledMessage={ownerDisabledMessage}
         />
 
+        <PrioritySelect value={priorityId} onChange={setPriorityId} />
+
+        <CategorySelect value={categoryId} onChange={setCategoryId} />
+
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
 
-        <Button type="submit" disabled={isSaving || isLoadingUsers || !currentUserId}>
+        <Button type="submit" disabled={isSaving || isLoadingUsers || !currentUserId || !priorityId}>
           {isSaving ? "Creating..." : "Create Ticket"}
         </Button>
       </form>
