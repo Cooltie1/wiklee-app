@@ -147,6 +147,13 @@ export default function UsersPage() {
     });
   }, [profiles, selectedFilter]);
 
+  const filterButtonClassName = (isSelected: boolean) =>
+    `rounded-full border shadow-xs ${
+      isSelected
+        ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+    }`;
+
   return (
     <section className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
       <div className="space-y-3">
@@ -159,8 +166,8 @@ export default function UsersPage() {
           <Button
             type="button"
             onClick={() => setSelectedFilter("everyone")}
-            variant={selectedFilter === "everyone" ? "default" : "outline"}
-            className="rounded-full"
+            variant="outline"
+            className={filterButtonClassName(selectedFilter === "everyone")}
             role="radio"
             aria-checked={selectedFilter === "everyone"}
           >
@@ -169,8 +176,8 @@ export default function UsersPage() {
           <Button
             type="button"
             onClick={() => setSelectedFilter("agents")}
-            variant={selectedFilter === "agents" ? "default" : "outline"}
-            className="rounded-full"
+            variant="outline"
+            className={filterButtonClassName(selectedFilter === "agents")}
             role="radio"
             aria-checked={selectedFilter === "agents"}
           >
@@ -179,8 +186,8 @@ export default function UsersPage() {
           <Button
             type="button"
             onClick={() => setSelectedFilter("users")}
-            variant={selectedFilter === "users" ? "default" : "outline"}
-            className="rounded-full"
+            variant="outline"
+            className={filterButtonClassName(selectedFilter === "users")}
             role="radio"
             aria-checked={selectedFilter === "users"}
           >
