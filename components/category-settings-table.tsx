@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
-import { GripVertical, MoreHorizontal, Pencil } from "lucide-react";
+import { Ban, GripVertical, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,10 @@ type TicketCategory = {
   name: string;
   description: string | null;
   sort_order: number | null;
+  is_active: boolean;
 };
+
+type CategoryFilter = "active" | "inactive";
 
 function orderCategories(categories: TicketCategory[]) {
   return [...categories].sort((a, b) => {
@@ -33,10 +36,12 @@ function orderCategories(categories: TicketCategory[]) {
 export function CategorySettingsTable() {
   const { openModal } = useModal();
   const [categories, setCategories] = useState<TicketCategory[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<CategoryFilter>("active");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [savingOrder, setSavingOrder] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,7 +76,7 @@ export function CategorySettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_categories")
-        .select("id, name, description, sort_order")
+        .select("id, name, description, sort_order, is_active")
         .eq("org_id", profile.org_id);
 
       if (error) {
@@ -95,7 +100,19 @@ export function CategorySettingsTable() {
     };
   }, []);
 
-  const isEmpty = useMemo(() => !loading && !errorMessage && categories.length === 0, [categories.length, errorMessage, loading]);
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => (selectedFilter === "active" ? category.is_active : !category.is_active)),
+    [categories, selectedFilter]
+  );
+
+  const isEmpty = useMemo(() => !loading && !errorMessage && visibleCategories.length === 0, [errorMessage, loading, visibleCategories.length]);
+
+  const filterButtonClassName = (isSelected: boolean) =>
+    `rounded-full border shadow-xs ${
+      isSelected
+        ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+    }`;
 
   const handleCategoryCreated = (category: TicketCategoryRow) => {
     setCategories((current) =>
@@ -106,6 +123,7 @@ export function CategorySettingsTable() {
           name: category.name,
           description: category.description,
           sort_order: category.sort_order,
+          is_active: category.is_active,
         },
       ])
     );
@@ -121,6 +139,7 @@ export function CategorySettingsTable() {
                 name: category.name,
                 description: category.description,
                 sort_order: category.sort_order,
+                is_active: category.is_active,
               }
             : existingCategory
         )
@@ -128,10 +147,56 @@ export function CategorySettingsTable() {
     );
   };
 
-  const persistOrder = async (orderedCategories: TicketCategory[]) => {
+  const handleCategoryDeactivated = (categoryId: string) => {
+    setCategories((current) =>
+      orderCategories(
+        current.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                is_active: false,
+              }
+            : category
+        )
+      )
+    );
+  };
+
+  const handleCategoryDeleted = (categoryId: string) => {
+    setCategories((current) => current.filter((category) => category.id !== categoryId));
+  };
+
+  const handleCategoryActivated = async (categoryId: string) => {
+    setStatusUpdatingId(categoryId);
+    setErrorMessage("");
+
+    const { error } = await supabase.from("ticket_categories").update({ is_active: true }).eq("id", categoryId);
+
+    if (error) {
+      setErrorMessage(error.message || "Unable to activate category");
+      setStatusUpdatingId(null);
+      return;
+    }
+
+    setCategories((current) =>
+      orderCategories(
+        current.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                is_active: true,
+              }
+            : category
+        )
+      )
+    );
+    setStatusUpdatingId(null);
+  };
+
+  const persistOrder = async (orderedVisibleCategories: TicketCategory[]) => {
     setSavingOrder(true);
 
-    const updates = orderedCategories.map((category, index) =>
+    const updates = orderedVisibleCategories.map((category, index) =>
       supabase
         .from("ticket_categories")
         .update({ sort_order: index + 1 })
@@ -145,7 +210,17 @@ export function CategorySettingsTable() {
       setErrorMessage(failedResult.error.message || "Unable to save category order");
     } else {
       setErrorMessage("");
-      setCategories(orderedCategories.map((category, index) => ({ ...category, sort_order: index + 1 })));
+      const reorderedIds = orderedVisibleCategories.map((category) => category.id);
+      const updatedById = new Map(orderedVisibleCategories.map((category, index) => [category.id, { ...category, sort_order: index + 1 }]));
+
+      setCategories((current) => {
+        const unaffected = current.filter((category) => !reorderedIds.includes(category.id));
+        const reordered = reorderedIds
+          .map((id) => updatedById.get(id))
+          .filter((category): category is TicketCategory => Boolean(category));
+
+        return orderCategories([...unaffected, ...reordered]);
+      });
     }
 
     setSavingOrder(false);
@@ -156,18 +231,23 @@ export function CategorySettingsTable() {
       return;
     }
 
-    const sourceIndex = categories.findIndex((category) => category.id === draggingId);
-    const targetIndex = categories.findIndex((category) => category.id === targetId);
+    const sourceIndex = visibleCategories.findIndex((category) => category.id === draggingId);
+    const targetIndex = visibleCategories.findIndex((category) => category.id === targetId);
 
     if (sourceIndex < 0 || targetIndex < 0) {
       return;
     }
 
-    const reordered = [...categories];
+    const reordered = [...visibleCategories];
     const [moved] = reordered.splice(sourceIndex, 1);
     reordered.splice(targetIndex, 0, moved);
 
-    setCategories(reordered);
+    setCategories((current) => {
+      const reorderedIds = reordered.map((category) => category.id);
+      const unaffected = current.filter((category) => !reorderedIds.includes(category.id));
+      return [...unaffected, ...reordered];
+    });
+
     void persistOrder(reordered);
   };
 
@@ -189,6 +269,29 @@ export function CategorySettingsTable() {
         <h1 className="text-3xl font-bold tracking-tight">Category</h1>
         <p className="text-sm text-muted-foreground">Manage category labels and drag rows to change the display order.</p>
       </header>
+
+      <div className="flex items-center gap-2" role="radiogroup" aria-label="Filter categories by status">
+        <Button
+          type="button"
+          onClick={() => setSelectedFilter("active")}
+          variant="outline"
+          className={filterButtonClassName(selectedFilter === "active")}
+          role="radio"
+          aria-checked={selectedFilter === "active"}
+        >
+          Active
+        </Button>
+        <Button
+          type="button"
+          onClick={() => setSelectedFilter("inactive")}
+          variant="outline"
+          className={filterButtonClassName(selectedFilter === "inactive")}
+          role="radio"
+          aria-checked={selectedFilter === "inactive"}
+        >
+          Inactive
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -226,7 +329,7 @@ export function CategorySettingsTable() {
                 </tr>
               </thead>
               <tbody>
-                {categories.map((category, index) => (
+                {visibleCategories.map((category, index) => (
                   <tr
                     key={category.id}
                     className="border-b last:border-0"
@@ -275,7 +378,47 @@ export function CategorySettingsTable() {
                             <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600 focus:text-red-600">Delete category</DropdownMenuItem>
+                          {category.is_active ? (
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onSelect={() => {
+                                openModal("deactivateCategory", {
+                                  categoryId: category.id,
+                                  categoryName: category.name,
+                                  onDeactivated: handleCategoryDeactivated,
+                                });
+                              }}
+                            >
+                              <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          ) : (
+                            <>
+                              <DropdownMenuItem
+                                className="text-emerald-700 focus:text-emerald-700"
+                                disabled={statusUpdatingId === category.id}
+                                onSelect={() => {
+                                  void handleCategoryActivated(category.id);
+                                }}
+                              >
+                                <Power className="mr-2 h-4 w-4" aria-hidden="true" />
+                                {statusUpdatingId === category.id ? "Activating..." : "Activate"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onSelect={() => {
+                                  openModal("deleteCategory", {
+                                    categoryId: category.id,
+                                    categoryName: category.name,
+                                    onDeleted: handleCategoryDeleted,
+                                  });
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

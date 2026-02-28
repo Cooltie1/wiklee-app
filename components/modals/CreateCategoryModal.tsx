@@ -107,7 +107,7 @@ export function CreateCategoryModal({
           .update(categoryPayload)
           .eq("id", categoryId)
           .eq("org_id", profile.org_id)
-          .select("id, org_id, name, description, sort_order, created_at")
+          .select("id, org_id, name, description, sort_order, is_active, created_at")
           .single()
       : supabase
           .from("ticket_categories")
@@ -115,8 +115,9 @@ export function CreateCategoryModal({
             ...categoryPayload,
             org_id: profile.org_id,
             sort_order: 0,
+            is_active: true,
           })
-          .select("id, org_id, name, description, sort_order, created_at")
+          .select("id, org_id, name, description, sort_order, is_active, created_at")
           .single();
 
     const { data: savedCategory, error: saveError } = await request;

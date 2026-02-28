@@ -11,6 +11,7 @@ type Category = {
   id: string;
   name: string;
   sort_order: number | null;
+  is_active: boolean;
   created_at: string;
 };
 
@@ -34,8 +35,9 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
 
       const { data, error } = await supabase
         .from("ticket_categories")
-        .select("id, name, sort_order, created_at")
+        .select("id, name, sort_order, is_active, created_at")
         .order("sort_order", { ascending: true })
+        .eq("is_active", true)
         .order("created_at", { ascending: true });
 
       if (!isMounted) {
@@ -65,6 +67,7 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
       id: category.id,
       name: category.name,
       sort_order: category.sort_order,
+      is_active: category.is_active,
       created_at: category.created_at,
     };
 
