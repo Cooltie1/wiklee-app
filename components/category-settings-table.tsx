@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
-import { Ban, GripVertical, MoreHorizontal, Pencil } from "lucide-react";
+import { Ban, GripVertical, MoreHorizontal, Pencil, Power } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,7 @@ export function CategorySettingsTable() {
   const [errorMessage, setErrorMessage] = useState("");
   const [savingOrder, setSavingOrder] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -159,6 +160,34 @@ export function CategorySettingsTable() {
         )
       )
     );
+  };
+
+
+  const handleCategoryActivated = async (categoryId: string) => {
+    setStatusUpdatingId(categoryId);
+    setErrorMessage("");
+
+    const { error } = await supabase.from("ticket_categories").update({ is_active: true }).eq("id", categoryId);
+
+    if (error) {
+      setErrorMessage(error.message || "Unable to activate category");
+      setStatusUpdatingId(null);
+      return;
+    }
+
+    setCategories((current) =>
+      orderCategories(
+        current.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                is_active: true,
+              }
+            : category
+        )
+      )
+    );
+    setStatusUpdatingId(null);
   };
 
   const persistOrder = async (orderedVisibleCategories: TicketCategory[]) => {
@@ -360,7 +389,18 @@ export function CategorySettingsTable() {
                               <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
                               Deactivate
                             </DropdownMenuItem>
-                          ) : null}
+                          ) : (
+                            <DropdownMenuItem
+                              className="text-emerald-700 focus:text-emerald-700"
+                              disabled={statusUpdatingId === category.id}
+                              onSelect={() => {
+                                void handleCategoryActivated(category.id);
+                              }}
+                            >
+                              <Power className="mr-2 h-4 w-4" aria-hidden="true" />
+                              {statusUpdatingId === category.id ? "Activating..." : "Activate"}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
