@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { Label } from "@/components/ui/label";
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
+import { useModal, type TicketCategoryRow } from "@/lib/useModal";
 
 type Category = {
   id: string;
@@ -19,6 +20,7 @@ type CategorySelectProps = {
 };
 
 export function CategorySelect({ value, onChange }: CategorySelectProps) {
+  const { openModal } = useModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -26,7 +28,7 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
   useEffect(() => {
     let isMounted = true;
 
-    const loadCategories = async () => {
+    const load = async () => {
       setIsLoading(true);
       setErrorMessage("");
 
@@ -51,12 +53,37 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
       setIsLoading(false);
     };
 
-    loadCategories();
+    load();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const handleCategoryCreated = (category: TicketCategoryRow) => {
+    const nextCategory: Category = {
+      id: category.id,
+      name: category.name,
+      sort_order: category.sort_order,
+      created_at: category.created_at,
+    };
+
+    setCategories((current) => {
+      const merged = [...current, nextCategory];
+      return merged.sort((a, b) => {
+        const aSort = a.sort_order ?? 0;
+        const bSort = b.sort_order ?? 0;
+
+        if (aSort !== bSort) {
+          return aSort - bSort;
+        }
+
+        return a.created_at.localeCompare(b.created_at);
+      });
+    });
+
+    onChange(category.id);
+  };
 
   return (
     <div className="space-y-2">
@@ -74,6 +101,13 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
           loading={isLoading}
           allowClear
           clearLabel="None"
+          action={{
+            label: "+ New category",
+            onClick: () =>
+              openModal("createCategory", {
+                onCreated: handleCategoryCreated,
+              }),
+          }}
         />
       </div>
       {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}
