@@ -8,6 +8,7 @@ export type TicketCategoryRow = {
   name: string;
   description: string | null;
   sort_order: number;
+  is_active: boolean;
   created_at: string;
 };
 
@@ -18,6 +19,11 @@ export type ModalRegistry = {
     defaultDescription?: string;
     onCreated?: (category: TicketCategoryRow) => void;
     onUpdated?: (category: TicketCategoryRow) => void;
+  };
+  deactivateCategory: {
+    categoryId: string;
+    categoryName: string;
+    onDeactivated?: (categoryId: string) => void;
   };
 };
 

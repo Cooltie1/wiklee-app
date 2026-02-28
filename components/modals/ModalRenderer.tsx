@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateCategoryModal } from "@/components/modals/CreateCategoryModal";
+import { DeactivateCategoryModal } from "@/components/modals/DeactivateCategoryModal";
 import type { ModalRegistry } from "@/lib/useModal";
 
 type ModalRendererProps = {
@@ -17,6 +18,8 @@ export function ModalRenderer({ modalType, modalProps, onClose }: ModalRendererP
   switch (modalType) {
     case "createCategory":
       return <CreateCategoryModal open onClose={onClose} {...modalProps} />;
+    case "deactivateCategory":
+      return <DeactivateCategoryModal open onClose={onClose} {...modalProps} />;
     default:
       return null;
   }
