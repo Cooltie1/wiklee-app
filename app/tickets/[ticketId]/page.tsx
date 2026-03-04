@@ -199,7 +199,7 @@ export default function TicketDetailPage() {
 
   return (
     <AppShell>
-      <section className="-m-6 h-full overflow-hidden">
+      <section className="-mx-6 -mt-6 -mb-2 h-full overflow-hidden">
         {isLoading ? (
           <div className="h-full bg-white p-6 text-sm text-zinc-500">Loading ticket...</div>
         ) : loadError || !ticket ? (
