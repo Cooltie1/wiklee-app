@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabase } from "@/lib/supabaseClient";
@@ -144,7 +145,11 @@ export default function TicketsPage() {
                 return (
                   <tr key={ticket.id} className="border-b border-zinc-100">
                     <td className="py-4">{ticket.ticket_number}</td>
-                    <td className="py-4 font-medium">{ticket.title}</td>
+                    <td className="py-4 font-medium">
+                      <Link href={`/tickets/${ticket.id}`} className="hover:underline">
+                        {ticket.title}
+                      </Link>
+                    </td>
                     <td className="py-4">{getStatusLabel(ticket.ticket_statuses)}</td>
                     <td className="py-4">{getCategoryName(ticket.ticket_categories)}</td>
                     <td className="py-4">

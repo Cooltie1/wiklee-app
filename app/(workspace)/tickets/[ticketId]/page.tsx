@@ -1,16 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 
 import { OwnerSelect } from "@/components/OwnerSelect";
 import { RequesterSelect } from "@/components/RequesterSelect";
 import { CategorySelect } from "@/components/lookup/CategorySelect";
-import { PrioritySelect } from "@/components/lookup/PrioritySelect";
 import type { ComboboxUser } from "@/components/UserCombobox";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -22,6 +18,15 @@ type ProfileRow = {
   role: string | null;
 };
 
+type TicketRow = {
+  id: string;
+  title: string;
+  description: string;
+  requester_id: string | null;
+  owner_id: string | null;
+  category_id: string | null;
+};
+
 function userFromAuth(userId: string, firstName?: string | null, lastName?: string | null): ComboboxUser {
   return {
     id: userId,
@@ -31,8 +36,9 @@ function userFromAuth(userId: string, firstName?: string | null, lastName?: stri
   };
 }
 
-export default function NewTicketPage() {
-  const router = useRouter();
+export default function TicketDetailPage() {
+  const { ticketId } = useParams<{ ticketId: string }>();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -41,40 +47,56 @@ export default function NewTicketPage() {
   const [requesterId, setRequesterId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [priorityId, setPriorityId] = useState<string | null>(null);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [requesterLoadError, setRequesterLoadError] = useState("");
   const [ownerLoadError, setOwnerLoadError] = useState("");
   const [ownerDisabledMessage, setOwnerDisabledMessage] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [saveErrorMessage, setSaveErrorMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadUsers = async () => {
-      setIsLoadingUsers(true);
-      setRequesterLoadError("");
-      setOwnerLoadError("");
-      setOwnerDisabledMessage("");
+    const loadPage = async () => {
+      setIsLoading(true);
+      setErrorMessage("");
+      setSaveErrorMessage("");
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      const currentUser = authData.user;
+      const [{ data: authData, error: authError }, { data: ticketData, error: ticketError }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from("tickets")
+          .select("id, title, description, requester_id, owner_id, category_id")
+          .eq("id", ticketId)
+          .single(),
+      ]);
 
       if (!isMounted) {
         return;
       }
 
+      const currentUser = authData.user;
+
       if (authError || !currentUser) {
-        setRequesterLoadError("Unable to load users");
-        setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents can assign owners");
-        setIsLoadingUsers(false);
+        setErrorMessage("Unable to load ticket details.");
+        setIsLoading(false);
         return;
       }
 
       setCurrentUserId(currentUser.id);
-      setRequesterId((previous) => previous ?? currentUser.id);
+
+      if (ticketError || !ticketData) {
+        setErrorMessage("Unable to load ticket details.");
+        setIsLoading(false);
+        return;
+      }
+
+      const loadedTicket = ticketData as TicketRow;
+      setTitle(loadedTicket.title);
+      setDescription(loadedTicket.description);
+      setRequesterId(loadedTicket.requester_id);
+      setOwnerId(loadedTicket.owner_id);
+      setCategoryId(loadedTicket.category_id);
 
       const fallbackCurrentUser = userFromAuth(
         currentUser.id,
@@ -96,7 +118,7 @@ export default function NewTicketPage() {
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
         setOwnerDisabledMessage("Only agents can assign owners");
-        setIsLoadingUsers(false);
+        setIsLoading(false);
         return;
       }
 
@@ -150,15 +172,15 @@ export default function NewTicketPage() {
 
       setRequesterUsers(normalizedRequesterList);
       setOwnerUsers(owners);
-      setIsLoadingUsers(false);
+      setIsLoading(false);
     };
 
-    loadUsers();
+    void loadPage();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [ticketId]);
 
   const isOwnerDisabled = useMemo(() => {
     if (!currentUserId || ownerDisabledMessage) {
@@ -168,101 +190,89 @@ export default function NewTicketPage() {
     return false;
   }, [currentUserId, ownerDisabledMessage]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setErrorMessage("");
+  const updateTicket = async (nextValues: Partial<Pick<TicketRow, "requester_id" | "owner_id" | "category_id">>) => {
+    setSaveErrorMessage("");
 
-    if (!currentUserId) {
-      setErrorMessage("Unable to determine current user.");
-      return;
-    }
-
-    const resolvedRequesterId = requesterId ?? currentUserId;
-
-    setIsSaving(true);
-
-    const { data, error } = await supabase
-      .from("tickets")
-      .insert({
-        title,
-        description,
-        requester_id: resolvedRequesterId,
-        owner_id: ownerId,
-        category_id: categoryId,
-        priority_id: priorityId,
-      })
-      .select("id")
-      .single();
-
-    setIsSaving(false);
+    const { error } = await supabase.from("tickets").update(nextValues).eq("id", ticketId);
 
     if (error) {
-      setErrorMessage(error.message);
-      return;
+      setSaveErrorMessage("Unable to save ticket updates.");
+      return false;
     }
 
-    router.push(`/tickets/${data.id}`);
+    return true;
   };
 
+  const handleRequesterChange = async (nextRequesterId: string | null) => {
+    const previousRequesterId = requesterId;
+    setRequesterId(nextRequesterId);
+    const success = await updateTicket({ requester_id: nextRequesterId });
+
+    if (!success) {
+      setRequesterId(previousRequesterId);
+    }
+  };
+
+  const handleOwnerChange = async (nextOwnerId: string | null) => {
+    const previousOwnerId = ownerId;
+    setOwnerId(nextOwnerId);
+    const success = await updateTicket({ owner_id: nextOwnerId });
+
+    if (!success) {
+      setOwnerId(previousOwnerId);
+    }
+  };
+
+  const handleCategoryChange = async (nextCategoryId: string | null) => {
+    const previousCategoryId = categoryId;
+    setCategoryId(nextCategoryId);
+    const success = await updateTicket({ category_id: nextCategoryId });
+
+    if (!success) {
+      setCategoryId(previousCategoryId);
+    }
+  };
+
+  if (isLoading) {
+    return <p className="text-sm text-zinc-500">Loading ticket...</p>;
+  }
+
+  if (errorMessage) {
+    return <p className="text-sm text-red-600">{errorMessage}</p>;
+  }
+
   return (
-    <section className="mx-auto w-full max-w-2xl rounded-2xl border border-zinc-200 bg-zinc-50/50 p-6">
-      <h2 className="text-3xl font-bold">Create Ticket</h2>
-      <p className="mt-2 text-sm text-zinc-500">Start a new support ticket for your workspace.</p>
-
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            name="title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Ticket title"
-            required
+    <section className="grid h-full grid-cols-[280px_1fr] gap-6 overflow-hidden">
+      <aside className="rounded-2xl border border-zinc-200 bg-zinc-50/50 p-4">
+        <div className="space-y-4">
+          <RequesterSelect
+            users={requesterUsers}
+            value={requesterId}
+            onChange={handleRequesterChange}
+            disabled={isLoading || !requesterUsers.length}
+            errorMessage={requesterLoadError}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <textarea
-            id="description"
-            name="description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Describe the issue"
-            className="min-h-32 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-            required
+          <OwnerSelect
+            users={ownerUsers}
+            value={ownerId}
+            currentUserId={currentUserId ?? ""}
+            onChange={handleOwnerChange}
+            disabled={isLoading || isOwnerDisabled}
+            errorMessage={ownerLoadError}
+            disabledMessage={ownerDisabledMessage}
           />
+
+          <CategorySelect value={categoryId} onChange={handleCategoryChange} />
+
+          {saveErrorMessage ? <p className="text-xs text-red-600">{saveErrorMessage}</p> : null}
         </div>
+      </aside>
 
-        <RequesterSelect
-          users={requesterUsers}
-          value={requesterId}
-          onChange={setRequesterId}
-          disabled={isLoadingUsers || !requesterUsers.length}
-          errorMessage={requesterLoadError}
-        />
-
-        <OwnerSelect
-          users={ownerUsers}
-          value={ownerId}
-          currentUserId={currentUserId ?? ""}
-          onChange={setOwnerId}
-          disabled={isLoadingUsers || isOwnerDisabled}
-          errorMessage={ownerLoadError}
-          disabledMessage={ownerDisabledMessage}
-        />
-
-        <PrioritySelect value={priorityId} onChange={setPriorityId} />
-
-        <CategorySelect value={categoryId} onChange={setCategoryId} />
-
-        {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
-
-        <Button type="submit" disabled={isSaving || isLoadingUsers || !currentUserId || !priorityId}>
-          {isSaving ? "Creating..." : "Create Ticket"}
-        </Button>
-      </form>
+      <article className="min-h-0 overflow-auto rounded-2xl border border-zinc-200 p-6">
+        <h1 className="text-3xl font-bold">{title}</h1>
+        <p className="mt-6 whitespace-pre-wrap text-sm text-zinc-700">{description}</p>
+      </article>
     </section>
   );
 }
