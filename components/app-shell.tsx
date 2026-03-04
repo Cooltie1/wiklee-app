@@ -269,7 +269,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="h-full min-h-0 overflow-y-auto overflow-x-hidden p-6">{children}</main>
+          <main className="h-full min-h-0 overflow-y-auto overflow-x-hidden px-6 pt-6 pb-2">{children}</main>
         </div>
       </div>
     </div>
