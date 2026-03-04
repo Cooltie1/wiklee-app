@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabase } from "@/lib/supabaseClient";
@@ -41,6 +42,7 @@ function getProfileName(profile?: ProfileRow) {
 }
 
 export default function TicketsPage() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, ProfileRow>>({});
   const [loading, setLoading] = useState(true);
@@ -142,7 +144,11 @@ export default function TicketsPage() {
                 const owner = ticket.owner_id ? profilesById[ticket.owner_id] : undefined;
 
                 return (
-                  <tr key={ticket.id} className="border-b border-zinc-100">
+                  <tr
+                    key={ticket.id}
+                    className="cursor-pointer border-b border-zinc-100 transition-colors hover:bg-zinc-50"
+                    onClick={() => router.push(`/tickets/${ticket.id}`)}
+                  >
                     <td className="py-4">{ticket.ticket_number}</td>
                     <td className="py-4 font-medium">{ticket.title}</td>
                     <td className="py-4">{getStatusLabel(ticket.ticket_statuses)}</td>
