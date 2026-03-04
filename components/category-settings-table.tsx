@@ -211,13 +211,15 @@ export function CategorySettingsTable() {
     } else {
       setErrorMessage("");
       const reorderedIds = orderedVisibleCategories.map((category) => category.id);
-      const updatedById = new Map(orderedVisibleCategories.map((category, index) => [category.id, { ...category, sort_order: index + 1 }]));
+      const updatedById = new Map<string, TicketCategory>(
+        orderedVisibleCategories.map((category, index) => [category.id, { ...category, sort_order: index + 1 }])
+      );
 
       setCategories((current) => {
         const unaffected = current.filter((category) => !reorderedIds.includes(category.id));
         const reordered = reorderedIds
           .map((id) => updatedById.get(id))
-          .filter((category): category is TicketCategory => Boolean(category));
+          .filter((category): category is TicketCategory => category !== undefined);
 
         return orderCategories([...unaffected, ...reordered]);
       });
