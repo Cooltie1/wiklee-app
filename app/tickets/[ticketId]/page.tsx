@@ -73,7 +73,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
   }, [autosaveError, isAnySaved, isAnySaving]);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[340px_1fr] overflow-hidden bg-white">
+    <div className="grid h-full min-h-0 grid-cols-[240px_1fr] overflow-hidden bg-white">
       <aside className="h-full border-r border-zinc-200 bg-white p-6">
         <div className="space-y-4">
           <RequesterSelect
