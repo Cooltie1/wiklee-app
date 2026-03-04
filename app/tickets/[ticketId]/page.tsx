@@ -36,28 +36,37 @@ type TicketDetailContentProps = {
   ownerUsers: ComboboxUser[];
 };
 
+async function updateTicketField(ticketId: string, patch: Partial<Pick<TicketRow, "requester_id" | "owner_id" | "category_id">>) {
+  const { count, error } = await supabase.from("tickets").update(patch, { count: "exact" }).eq("id", ticketId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (count !== 1) {
+    throw new Error("Unable to save changes.");
+  }
+}
+
 function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers }: TicketDetailContentProps) {
   const requesterAutosave = useFieldAutosave<string | null>({
     initialValue: ticket.requester_id,
     onSave: async (nextValue) => {
-      const { error } = await supabase.from("tickets").update({ requester_id: nextValue }).eq("id", ticket.id);
-      if (error) throw new Error(error.message);
+      await updateTicketField(ticket.id, { requester_id: nextValue });
     },
   });
 
   const ownerAutosave = useFieldAutosave<string | null>({
     initialValue: ticket.owner_id,
     onSave: async (nextValue) => {
-      const { error } = await supabase.from("tickets").update({ owner_id: nextValue }).eq("id", ticket.id);
-      if (error) throw new Error(error.message);
+      await updateTicketField(ticket.id, { owner_id: nextValue });
     },
   });
 
   const categoryAutosave = useFieldAutosave<string | null>({
     initialValue: ticket.category_id,
     onSave: async (nextValue) => {
-      const { error } = await supabase.from("tickets").update({ category_id: nextValue }).eq("id", ticket.id);
-      if (error) throw new Error(error.message);
+      await updateTicketField(ticket.id, { category_id: nextValue });
     },
   });
 
