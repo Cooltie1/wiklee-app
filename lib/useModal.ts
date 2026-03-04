@@ -32,7 +32,7 @@ export type ModalRegistry = {
   };
 };
 
-type ActiveModal = {
+export type ActiveModal = {
   [K in keyof ModalRegistry]: {
     type: K;
     props: ModalRegistry[K];

@@ -3,14 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { ModalRenderer } from "@/components/modals/ModalRenderer";
-import { ModalContext, type ModalRegistry } from "@/lib/useModal";
-
-type ActiveModal = {
-  [K in keyof ModalRegistry]: {
-    type: K;
-    props: ModalRegistry[K];
-  }
-}[keyof ModalRegistry];
+import { ModalContext, type ActiveModal, type ModalRegistry } from "@/lib/useModal";
 
 export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
@@ -31,7 +24,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   return (
     <ModalContext.Provider value={value}>
       {children}
-      <ModalRenderer modalType={activeModal?.type ?? null} modalProps={activeModal?.props ?? null} onClose={value.closeModal} />
+      <ModalRenderer activeModal={activeModal} onClose={value.closeModal} />
     </ModalContext.Provider>
   );
 }
