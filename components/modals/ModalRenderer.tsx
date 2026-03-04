@@ -3,26 +3,25 @@
 import { CreateCategoryModal } from "@/components/modals/CreateCategoryModal";
 import { DeactivateCategoryModal } from "@/components/modals/DeactivateCategoryModal";
 import { DeleteCategoryModal } from "@/components/modals/DeleteCategoryModal";
-import type { ModalRegistry } from "@/lib/useModal";
+import type { ActiveModal } from "@/lib/useModal";
 
 type ModalRendererProps = {
-  modalType: keyof ModalRegistry | null;
-  modalProps: ModalRegistry[keyof ModalRegistry] | null;
+  activeModal: ActiveModal | null;
   onClose: () => void;
 };
 
-export function ModalRenderer({ modalType, modalProps, onClose }: ModalRendererProps) {
-  if (!modalType || !modalProps) {
+export function ModalRenderer({ activeModal, onClose }: ModalRendererProps) {
+  if (!activeModal) {
     return null;
   }
 
-  switch (modalType) {
+  switch (activeModal.type) {
     case "createCategory":
-      return <CreateCategoryModal open onClose={onClose} {...modalProps} />;
+      return <CreateCategoryModal open onClose={onClose} {...activeModal.props} />;
     case "deactivateCategory":
-      return <DeactivateCategoryModal open onClose={onClose} {...modalProps} />;
+      return <DeactivateCategoryModal open onClose={onClose} {...activeModal.props} />;
     case "deleteCategory":
-      return <DeleteCategoryModal open onClose={onClose} {...modalProps} />;
+      return <DeleteCategoryModal open onClose={onClose} {...activeModal.props} />;
     default:
       return null;
   }
