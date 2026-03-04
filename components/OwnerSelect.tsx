@@ -6,7 +6,7 @@ import { UserCombobox, type ComboboxUser } from "@/components/UserCombobox"
 type OwnerSelectProps = {
   users: ComboboxUser[]
   value: string | null
-  currentUserId: string
+  currentUserId?: string | null
   onChange: (value: string | null) => void
   errorMessage?: string
   disabled?: boolean
@@ -34,11 +34,15 @@ export function OwnerSelect({
           searchPlaceholder="Search agents..."
           emptyText="No users found"
           disabled={disabled}
-          topAction={{
-            label: "Assign to me",
-            active: value === currentUserId,
-            onSelect: () => onChange(currentUserId),
-          }}
+          topAction={
+            currentUserId
+              ? {
+                  label: "Assign to me",
+                  active: value === currentUserId,
+                  onSelect: () => onChange(currentUserId),
+                }
+              : undefined
+          }
         />
       </div>
       {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}

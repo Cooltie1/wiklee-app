@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+
+import { useRouter } from "next/navigation";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabase } from "@/lib/supabaseClient";
@@ -41,6 +43,7 @@ function getProfileName(profile?: ProfileRow) {
 }
 
 export default function TicketsPage() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, ProfileRow>>({});
   const [loading, setLoading] = useState(true);
@@ -141,8 +144,27 @@ export default function TicketsPage() {
                 const requester = ticket.requester_id ? profilesById[ticket.requester_id] : undefined;
                 const owner = ticket.owner_id ? profilesById[ticket.owner_id] : undefined;
 
+                const handleOpenTicket = () => {
+                  router.push(`/tickets/${ticket.id}`);
+                };
+
+                const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleOpenTicket();
+                  }
+                };
+
                 return (
-                  <tr key={ticket.id} className="border-b border-zinc-100">
+                  <tr
+                    key={ticket.id}
+                    className="cursor-pointer border-b border-zinc-100 transition-colors hover:bg-zinc-50"
+                    onClick={handleOpenTicket}
+                    onKeyDown={handleRowKeyDown}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Open ticket ${ticket.ticket_number}`}
+                  >
                     <td className="py-4">{ticket.ticket_number}</td>
                     <td className="py-4 font-medium">{ticket.title}</td>
                     <td className="py-4">{getStatusLabel(ticket.ticket_statuses)}</td>

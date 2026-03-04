@@ -181,23 +181,27 @@ export default function NewTicketPage() {
 
     setIsSaving(true);
 
-    const { error } = await supabase.from("tickets").insert({
-      title,
-      description,
-      requester_id: resolvedRequesterId,
-      owner_id: ownerId,
-      category_id: categoryId,
-      priority_id: priorityId,
-    });
+    const { data, error } = await supabase
+      .from("tickets")
+      .insert({
+        title,
+        description,
+        requester_id: resolvedRequesterId,
+        owner_id: ownerId,
+        category_id: categoryId,
+        priority_id: priorityId,
+      })
+      .select("id")
+      .single();
 
     setIsSaving(false);
 
-    if (error) {
-      setErrorMessage(error.message);
+    if (error || !data?.id) {
+      setErrorMessage(error?.message ?? "Unable to create ticket.");
       return;
     }
 
-    router.push("/");
+    router.push(`/tickets/${data.id}`);
   };
 
   return (

@@ -18,9 +18,10 @@ type Category = {
 type CategorySelectProps = {
   value: string | null;
   onChange: (id: string | null) => void;
+  disabled?: boolean;
 };
 
-export function CategorySelect({ value, onChange }: CategorySelectProps) {
+export function CategorySelect({ value, onChange, disabled }: CategorySelectProps) {
   const { openModal } = useModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,6 +103,7 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
           searchPlaceholder="Search categories..."
           emptyText="No categories found"
           loading={isLoading}
+          disabled={disabled}
           allowClear
           clearLabel="None"
           action={{
