@@ -53,6 +53,7 @@ export default function TicketDetailPage() {
   const [ownerDisabledMessage, setOwnerDisabledMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saveErrorMessage, setSaveErrorMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -192,8 +193,11 @@ export default function TicketDetailPage() {
 
   const updateTicket = async (nextValues: Partial<Pick<TicketRow, "requester_id" | "owner_id" | "category_id">>) => {
     setSaveErrorMessage("");
+    setIsSaving(true);
 
     const { error } = await supabase.from("tickets").update(nextValues).eq("id", ticketId);
+
+    setIsSaving(false);
 
     if (error) {
       setSaveErrorMessage("Unable to save ticket updates.");
@@ -249,7 +253,7 @@ export default function TicketDetailPage() {
             users={requesterUsers}
             value={requesterId}
             onChange={handleRequesterChange}
-            disabled={isLoading || !requesterUsers.length}
+            disabled={isLoading || isSaving || !requesterUsers.length}
             errorMessage={requesterLoadError}
           />
 
@@ -258,13 +262,14 @@ export default function TicketDetailPage() {
             value={ownerId}
             currentUserId={currentUserId ?? ""}
             onChange={handleOwnerChange}
-            disabled={isLoading || isOwnerDisabled}
+            disabled={isLoading || isSaving || isOwnerDisabled}
             errorMessage={ownerLoadError}
             disabledMessage={ownerDisabledMessage}
           />
 
           <CategorySelect value={categoryId} onChange={handleCategoryChange} />
 
+          {isSaving ? <p className="text-xs text-zinc-500">Saving changes...</p> : null}
           {saveErrorMessage ? <p className="text-xs text-red-600">{saveErrorMessage}</p> : null}
         </div>
       </aside>
