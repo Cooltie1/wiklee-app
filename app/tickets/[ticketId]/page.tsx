@@ -40,11 +40,24 @@ async function updateTicketField(ticketId: string, patch: Partial<Pick<TicketRow
   const { count, error } = await supabase.from("tickets").update(patch, { count: "exact" }).eq("id", ticketId);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Ticket autosave failed", {
+      ticketId,
+      patch,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      message: error.message,
+    });
+    throw new Error(`Unable to save changes (${error.message}).`);
   }
 
   if (count !== 1) {
-    throw new Error("Unable to save changes.");
+    console.error("Ticket autosave update affected unexpected number of rows", {
+      ticketId,
+      patch,
+      count,
+    });
+    throw new Error(`Unable to save changes (updated ${count ?? 0} rows).`);
   }
 }
 
