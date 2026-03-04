@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import AppShell from "@/components/app-shell";
@@ -14,6 +15,7 @@ import { useFieldAutosave } from "@/lib/useFieldAutosave";
 
 type TicketRow = {
   id: string;
+  ticket_number: number;
   title: string;
   description: string | null;
   requester_id: string | null;
@@ -99,7 +101,19 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
       </aside>
 
       <div className="h-full overflow-auto bg-white p-6">
-        <h1 className="text-3xl font-bold">{ticket.title}</h1>
+        <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2">
+            <li>
+              <Link href="/" className="hover:text-zinc-900 hover:underline">
+                Tickets
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="text-zinc-900">#{ticket.ticket_number}</li>
+          </ol>
+        </nav>
+
+        <h1 className="mt-4 text-3xl font-bold">{ticket.title}</h1>
         <p className="mt-4 whitespace-pre-wrap text-sm text-zinc-700">{ticket.description || "No description provided."}</p>
       </div>
     </div>
@@ -129,7 +143,7 @@ export default function TicketDetailPage() {
           supabase.auth.getUser(),
           supabase
             .from("tickets")
-            .select("id, title, description, requester_id, owner_id, category_id")
+            .select("id, ticket_number, title, description, requester_id, owner_id, category_id")
             .eq("id", ticketId)
             .single(),
           supabase.from("profiles").select("id, first_name, last_name, avatar_path, role"),
