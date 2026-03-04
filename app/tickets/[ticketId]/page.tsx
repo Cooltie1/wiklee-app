@@ -73,7 +73,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
   }, [autosaveError, isAnySaved, isAnySaving]);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[340px_1fr] overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
+    <div className="grid h-full min-h-0 grid-cols-[340px_1fr] overflow-hidden bg-white">
       <aside className="h-full border-r border-zinc-200 bg-white p-6">
         <div className="space-y-4">
           <RequesterSelect
@@ -98,7 +98,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         </div>
       </aside>
 
-      <div className="h-full overflow-auto p-6">
+      <div className="h-full overflow-auto bg-white p-6">
         <h1 className="text-3xl font-bold">{ticket.title}</h1>
         <p className="mt-4 whitespace-pre-wrap text-sm text-zinc-700">{ticket.description || "No description provided."}</p>
       </div>
@@ -199,11 +199,11 @@ export default function TicketDetailPage() {
 
   return (
     <AppShell>
-      <section className="h-full overflow-hidden">
+      <section className="-m-6 h-full overflow-hidden">
         {isLoading ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">Loading ticket...</div>
+          <div className="h-full bg-white p-6 text-sm text-zinc-500">Loading ticket...</div>
         ) : loadError || !ticket ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+          <div className="h-full bg-white p-6 text-sm text-red-700">
             {loadError || "We couldn't load this ticket."}
           </div>
         ) : (
