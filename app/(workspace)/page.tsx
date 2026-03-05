@@ -4,8 +4,10 @@ import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
+import { StatusLabel } from "@/components/status-label";
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabase } from "@/lib/supabaseClient";
+import { TicketStatusRow } from "@/lib/useModal";
 
 type TicketRow = {
   id: string;
@@ -14,7 +16,7 @@ type TicketRow = {
   created_at: string;
   requester_id: string | null;
   owner_id: string | null;
-  ticket_statuses: { label: string } | { label: string }[] | null;
+  ticket_statuses: { label: string; color: TicketStatusRow["color"] } | { label: string; color: TicketStatusRow["color"] }[] | null;
   ticket_categories: { name: string } | { name: string }[] | null;
 };
 
@@ -25,9 +27,9 @@ type ProfileRow = {
   avatar_path: string | null;
 };
 
-function getStatusLabel(status: TicketRow["ticket_statuses"]) {
-  if (!status) return "—";
-  return Array.isArray(status) ? status[0]?.label ?? "—" : status.label;
+function getStatus(status: TicketRow["ticket_statuses"]) {
+  if (!status) return null;
+  return Array.isArray(status) ? status[0] ?? null : status;
 }
 
 function getCategoryName(category: TicketRow["ticket_categories"]) {
@@ -65,7 +67,7 @@ export default function TicketsPage() {
 
       const { data: ticketData, error: ticketError } = await supabase
         .from("tickets")
-        .select("id, ticket_number, title, created_at, requester_id, owner_id, ticket_statuses(label), ticket_categories(name)")
+        .select("id, ticket_number, title, created_at, requester_id, owner_id, ticket_statuses(label, color), ticket_categories(name)")
         .order("created_at", { ascending: false });
 
       if (ticketError) {
@@ -143,6 +145,7 @@ export default function TicketsPage() {
               {tickets.map((ticket) => {
                 const requester = ticket.requester_id ? profilesById[ticket.requester_id] : undefined;
                 const owner = ticket.owner_id ? profilesById[ticket.owner_id] : undefined;
+                const status = getStatus(ticket.ticket_statuses);
 
                 const handleOpenTicket = () => {
                   router.push(`/tickets/${ticket.id}`);
@@ -167,7 +170,9 @@ export default function TicketsPage() {
                   >
                     <td className="max-w-0 truncate py-4 whitespace-nowrap">{ticket.ticket_number}</td>
                     <td className="max-w-0 truncate py-4 font-medium whitespace-nowrap">{ticket.title}</td>
-                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{getStatusLabel(ticket.ticket_statuses)}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">
+                      {status ? <StatusLabel label={status.label} color={status.color} /> : "—"}
+                    </td>
                     <td className="max-w-0 truncate py-4 whitespace-nowrap">{getCategoryName(ticket.ticket_categories)}</td>
                     <td className="py-4">
                       {requester ? (

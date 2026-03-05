@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
 import { Ban, GripVertical, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 
+import { StatusLabel } from "@/components/status-label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -14,28 +15,13 @@ type TicketStatus = {
   id: string;
   org_id: string | null;
   label: string;
+  description: string | null;
   color: TicketStatusRow["color"];
   sort_order: number | null;
   is_active: boolean;
 };
 
 type StatusFilter = "active" | "inactive";
-
-
-function getStatusColorClassName(color: TicketStatusRow["color"]) {
-  switch (color) {
-    case "green":
-      return "bg-green-500";
-    case "amber":
-      return "bg-amber-500";
-    case "red":
-      return "bg-red-500";
-    case "blue":
-      return "bg-blue-500";
-    default:
-      return "bg-zinc-500";
-  }
-}
 
 function orderStatuses(statuses: TicketStatus[]) {
   return [...statuses].sort((a, b) => {
@@ -93,7 +79,7 @@ export function StatusSettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_statuses")
-        .select("id, org_id, label, color, sort_order, is_active")
+        .select("id, org_id, label, description, color, sort_order, is_active")
         .or(`org_id.eq.${profile.org_id},org_id.is.null`);
 
       if (error) {
@@ -139,6 +125,7 @@ export function StatusSettingsTable() {
           id: status.id,
           org_id: status.org_id,
           label: status.label,
+          description: status.description,
           color: status.color,
           sort_order: status.sort_order,
           is_active: status.is_active,
@@ -156,6 +143,7 @@ export function StatusSettingsTable() {
                 ...existingStatus,
                 org_id: status.org_id,
                 label: status.label,
+                description: status.description,
                 color: status.color,
                 sort_order: status.sort_order,
                 is_active: status.is_active,
@@ -341,8 +329,8 @@ export function StatusSettingsTable() {
               <thead>
                 <tr className="border-b text-muted-foreground">
                   <th className="w-16 py-3 font-medium">Order</th>
-                  <th className="w-48 py-3 font-medium">ID</th>
                   <th className="py-3 font-medium">Label</th>
+                  <th className="py-3 font-medium">Description</th>
                   <th className="w-16 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
@@ -372,13 +360,10 @@ export function StatusSettingsTable() {
                         {index + 1}
                       </div>
                     </td>
-                    <td className="py-4 font-mono text-xs text-muted-foreground">{status.id}</td>
                     <td className="py-4 font-medium">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2.5 w-2.5 rounded-full ${getStatusColorClassName(status.color)}`} aria-hidden="true" />
-                        <span>{status.label}</span>
-                      </div>
+                      <StatusLabel label={status.label} color={status.color} />
                     </td>
+                    <td className="py-4 text-sm text-muted-foreground">{status.description ?? "—"}</td>
                     <td className="py-4 text-right">
                       {status.org_id === null ? (
                         <span className="text-xs text-muted-foreground">System</span>
@@ -395,6 +380,7 @@ export function StatusSettingsTable() {
                                 openModal("createStatus", {
                                   statusId: status.id,
                                   defaultLabel: status.label,
+                                  defaultDescription: status.description ?? "",
                                   defaultColor: status.color,
                                   onUpdated: handleStatusUpdated,
                                 });
