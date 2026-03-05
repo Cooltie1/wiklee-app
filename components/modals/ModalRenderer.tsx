@@ -3,6 +3,9 @@
 import { CreateCategoryModal } from "@/components/modals/CreateCategoryModal";
 import { DeactivateCategoryModal } from "@/components/modals/DeactivateCategoryModal";
 import { DeleteCategoryModal } from "@/components/modals/DeleteCategoryModal";
+import { CreateStatusModal } from "@/components/modals/CreateStatusModal";
+import { DeactivateStatusModal } from "@/components/modals/DeactivateStatusModal";
+import { DeleteStatusModal } from "@/components/modals/DeleteStatusModal";
 import type { ActiveModal } from "@/lib/useModal";
 
 type ModalRendererProps = {
@@ -22,6 +25,12 @@ export function ModalRenderer({ activeModal, onClose }: ModalRendererProps) {
       return <DeactivateCategoryModal open onClose={onClose} {...activeModal.props} />;
     case "deleteCategory":
       return <DeleteCategoryModal open onClose={onClose} {...activeModal.props} />;
+    case "createStatus":
+      return <CreateStatusModal open onClose={onClose} {...activeModal.props} />;
+    case "deactivateStatus":
+      return <DeactivateStatusModal open onClose={onClose} {...activeModal.props} />;
+    case "deleteStatus":
+      return <DeleteStatusModal open onClose={onClose} {...activeModal.props} />;
     default:
       return null;
   }
