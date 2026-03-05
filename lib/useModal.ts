@@ -16,8 +16,9 @@ export type TicketCategoryRow = {
 
 export type TicketStatusRow = {
   id: string;
-  org_id: string;
+  org_id: string | null;
   label: string;
+  color: "green" | "amber" | "red" | "zinc" | "blue";
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -44,6 +45,7 @@ export type ModalRegistry = {
   createStatus: {
     statusId?: string;
     defaultLabel?: string;
+    defaultColor?: TicketStatusRow["color"];
     onCreated?: (status: TicketStatusRow) => void;
     onUpdated?: (status: TicketStatusRow) => void;
   };

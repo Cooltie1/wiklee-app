@@ -14,11 +14,28 @@ type TicketStatus = {
   id: string;
   org_id: string | null;
   label: string;
+  color: TicketStatusRow["color"];
   sort_order: number | null;
   is_active: boolean;
 };
 
 type StatusFilter = "active" | "inactive";
+
+
+function getStatusColorClassName(color: TicketStatusRow["color"]) {
+  switch (color) {
+    case "green":
+      return "bg-green-500";
+    case "amber":
+      return "bg-amber-500";
+    case "red":
+      return "bg-red-500";
+    case "blue":
+      return "bg-blue-500";
+    default:
+      return "bg-zinc-500";
+  }
+}
 
 function orderStatuses(statuses: TicketStatus[]) {
   return [...statuses].sort((a, b) => {
@@ -76,7 +93,7 @@ export function StatusSettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_statuses")
-        .select("id, org_id, label, sort_order, is_active")
+        .select("id, org_id, label, color, sort_order, is_active")
         .or(`org_id.eq.${profile.org_id},org_id.is.null`);
 
       if (error) {
@@ -122,6 +139,7 @@ export function StatusSettingsTable() {
           id: status.id,
           org_id: status.org_id,
           label: status.label,
+          color: status.color,
           sort_order: status.sort_order,
           is_active: status.is_active,
         },
@@ -138,6 +156,7 @@ export function StatusSettingsTable() {
                 ...existingStatus,
                 org_id: status.org_id,
                 label: status.label,
+                color: status.color,
                 sort_order: status.sort_order,
                 is_active: status.is_active,
               }
@@ -199,10 +218,10 @@ export function StatusSettingsTable() {
     const updates = orderedVisibleStatuses
       .filter((status) => status.org_id !== null)
       .map((status, index) =>
-      supabase
-        .from("ticket_statuses")
-        .update({ sort_order: index + 1 })
-        .eq("id", status.id)
+        supabase
+          .from("ticket_statuses")
+          .update({ sort_order: index + 1 })
+          .eq("id", status.id)
       );
 
     const results = await Promise.all(updates);
@@ -354,7 +373,12 @@ export function StatusSettingsTable() {
                       </div>
                     </td>
                     <td className="py-4 font-mono text-xs text-muted-foreground">{status.id}</td>
-                    <td className="py-4 font-medium">{status.label}</td>
+                    <td className="py-4 font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2.5 w-2.5 rounded-full ${getStatusColorClassName(status.color)}`} aria-hidden="true" />
+                        <span>{status.label}</span>
+                      </div>
+                    </td>
                     <td className="py-4 text-right">
                       {status.org_id === null ? (
                         <span className="text-xs text-muted-foreground">System</span>
@@ -371,6 +395,7 @@ export function StatusSettingsTable() {
                                 openModal("createStatus", {
                                   statusId: status.id,
                                   defaultLabel: status.label,
+                                  defaultColor: status.color,
                                   onUpdated: handleStatusUpdated,
                                 });
                               }}

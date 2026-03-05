@@ -16,17 +16,23 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 import type { TicketStatusRow } from "@/lib/useModal";
 
+type StatusColor = TicketStatusRow["color"];
+
+const STATUS_COLOR_OPTIONS: StatusColor[] = ["green", "amber", "red", "zinc", "blue"];
+
 type CreateStatusModalProps = {
   open: boolean;
   onClose: () => void;
   statusId?: string;
   defaultLabel?: string;
+  defaultColor?: StatusColor;
   onCreated?: (status: TicketStatusRow) => void;
   onUpdated?: (status: TicketStatusRow) => void;
 };
 
-export function CreateStatusModal({ open, onClose, statusId, defaultLabel, onCreated, onUpdated }: CreateStatusModalProps) {
+export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defaultColor, onCreated, onUpdated }: CreateStatusModalProps) {
   const [label, setLabel] = useState(defaultLabel ?? "");
+  const [color, setColor] = useState<StatusColor>(defaultColor ?? "zinc");
   const [labelError, setLabelError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,6 +88,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, onCre
 
     const statusPayload = {
       label: trimmedLabel,
+      color,
     };
 
     const request = isEditing
@@ -90,7 +97,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, onCre
           .update(statusPayload)
           .eq("id", statusId)
           .eq("org_id", profile.org_id)
-          .select("id, org_id, label, sort_order, is_active, created_at")
+          .select("id, org_id, label, color, sort_order, is_active, created_at")
           .single()
       : supabase
           .from("ticket_statuses")
@@ -100,7 +107,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, onCre
             sort_order: 0,
             is_active: true,
           })
-          .select("id, org_id, label, sort_order, is_active, created_at")
+          .select("id, org_id, label, color, sort_order, is_active, created_at")
           .single();
 
     const { data: savedStatus, error: saveError } = await request;
@@ -127,6 +134,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, onCre
     }
 
     setLabel(defaultLabel ?? "");
+    setColor(defaultColor ?? "zinc");
     setSubmitError("");
     onClose();
   };
@@ -148,6 +156,22 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, onCre
             <Label htmlFor="status-label">Label</Label>
             <Input id="status-label" value={label} onChange={(event) => setLabel(event.target.value)} />
             {labelError ? <p className="text-xs text-red-600">{labelError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status-color">Color</Label>
+            <select
+              id="status-color"
+              value={color}
+              onChange={(event) => setColor(event.target.value as StatusColor)}
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-1 focus-visible:outline-none"
+            >
+              {STATUS_COLOR_OPTIONS.map((colorOption) => (
+                <option key={colorOption} value={colorOption}>
+                  {colorOption[0].toUpperCase() + colorOption.slice(1)}
+                </option>
+              ))}
+            </select>
           </div>
 
           <DialogFooter>
