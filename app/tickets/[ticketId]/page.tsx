@@ -176,7 +176,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
           <Input
             value={titleAutosave.currentValue}
             onChange={(event) => titleAutosave.setValue(event.target.value)}
-            className="mt-4 h-auto rounded-md border border-transparent px-2 py-1 text-2xl font-semibold shadow-none hover:border-zinc-300 focus-visible:border-zinc-400 focus-visible:ring-0"
+            className="mt-4 h-auto w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-transparent px-2 py-1 text-2xl font-semibold shadow-none hover:border-zinc-300 focus-visible:border-zinc-400 focus-visible:ring-0"
             aria-label="Ticket title"
           />
         </div>
