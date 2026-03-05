@@ -1,7 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import { ChevronsUpDown } from "lucide-react";
 
+import { StatusLabel } from "@/components/status-label";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,14 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
+import { cn } from "@/lib/utils";
 import type { TicketStatusRow } from "@/lib/useModal";
 
 type StatusColor = TicketStatusRow["color"];
 
-const STATUS_COLOR_OPTIONS: StatusColor[] = ["green", "amber", "red", "zinc", "blue"];
+const STATUS_COLOR_OPTIONS: StatusColor[] = ["green", "amber", "red", "zinc", "blue", "purple"];
 
 type CreateStatusModalProps = {
   open: boolean;
@@ -30,6 +34,10 @@ type CreateStatusModalProps = {
   onUpdated?: (status: TicketStatusRow) => void;
 };
 
+function getColorLabel(color: StatusColor) {
+  return color[0].toUpperCase() + color.slice(1);
+}
+
 export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defaultColor, onCreated, onUpdated }: CreateStatusModalProps) {
   const [label, setLabel] = useState(defaultLabel ?? "");
   const [color, setColor] = useState<StatusColor>(defaultColor ?? "zinc");
@@ -37,6 +45,8 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = Boolean(statusId);
+
+  const selectedColorText = useMemo(() => getColorLabel(color), [color]);
 
   const handleCancel = () => {
     if (isSubmitting) {
@@ -160,18 +170,36 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
 
           <div className="space-y-2">
             <Label htmlFor="status-color">Color</Label>
-            <select
-              id="status-color"
-              value={color}
-              onChange={(event) => setColor(event.target.value as StatusColor)}
-              className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus-visible:ring-1 focus-visible:outline-none"
-            >
-              {STATUS_COLOR_OPTIONS.map((colorOption) => (
-                <option key={colorOption} value={colorOption}>
-                  {colorOption[0].toUpperCase() + colorOption.slice(1)}
-                </option>
-              ))}
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id="status-color"
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  disabled={isSubmitting}
+                >
+                  <span className="flex items-center gap-2">
+                    <StatusLabel label={selectedColorText} color={color} />
+                  </span>
+                  <ChevronsUpDown className="size-4 text-muted-foreground" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width)">
+                {STATUS_COLOR_OPTIONS.map((colorOption) => {
+                  const colorText = getColorLabel(colorOption);
+                  return (
+                    <DropdownMenuItem
+                      key={colorOption}
+                      onSelect={() => setColor(colorOption)}
+                      className={cn("cursor-pointer", color === colorOption ? "bg-accent" : undefined)}
+                    >
+                      <StatusLabel label={colorText} color={colorOption} />
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <DialogFooter>

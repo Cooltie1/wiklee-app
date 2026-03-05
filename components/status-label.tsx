@@ -24,6 +24,10 @@ const STATUS_COLOR_CLASSES: Record<TicketStatusRow["color"], { badge: string; do
     badge: "bg-blue-100 text-blue-800",
     dot: "bg-blue-600",
   },
+  purple: {
+    badge: "bg-purple-100 text-purple-800",
+    dot: "bg-purple-600",
+  },
   zinc: {
     badge: "bg-zinc-200 text-zinc-800",
     dot: "bg-zinc-600",

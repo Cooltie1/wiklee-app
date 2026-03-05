@@ -326,7 +326,6 @@ export function StatusSettingsTable() {
               <thead>
                 <tr className="border-b text-muted-foreground">
                   <th className="w-16 py-3 font-medium">Order</th>
-                  <th className="w-48 py-3 font-medium">ID</th>
                   <th className="py-3 font-medium">Label</th>
                   <th className="w-16 py-3 text-right font-medium">Actions</th>
                 </tr>
@@ -357,7 +356,6 @@ export function StatusSettingsTable() {
                         {index + 1}
                       </div>
                     </td>
-                    <td className="py-4 font-mono text-xs text-muted-foreground">{status.id}</td>
                     <td className="py-4 font-medium">
                       <StatusLabel label={status.label} color={status.color} />
                     </td>
