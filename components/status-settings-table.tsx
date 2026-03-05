@@ -15,6 +15,7 @@ type TicketStatus = {
   id: string;
   org_id: string | null;
   label: string;
+  description: string | null;
   color: TicketStatusRow["color"];
   sort_order: number | null;
   is_active: boolean;
@@ -78,7 +79,7 @@ export function StatusSettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_statuses")
-        .select("id, org_id, label, color, sort_order, is_active")
+        .select("id, org_id, label, description, color, sort_order, is_active")
         .or(`org_id.eq.${profile.org_id},org_id.is.null`);
 
       if (error) {
@@ -124,6 +125,7 @@ export function StatusSettingsTable() {
           id: status.id,
           org_id: status.org_id,
           label: status.label,
+          description: status.description,
           color: status.color,
           sort_order: status.sort_order,
           is_active: status.is_active,
@@ -141,6 +143,7 @@ export function StatusSettingsTable() {
                 ...existingStatus,
                 org_id: status.org_id,
                 label: status.label,
+                description: status.description,
                 color: status.color,
                 sort_order: status.sort_order,
                 is_active: status.is_active,
@@ -327,6 +330,7 @@ export function StatusSettingsTable() {
                 <tr className="border-b text-muted-foreground">
                   <th className="w-16 py-3 font-medium">Order</th>
                   <th className="py-3 font-medium">Label</th>
+                  <th className="py-3 font-medium">Description</th>
                   <th className="w-16 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
@@ -359,6 +363,7 @@ export function StatusSettingsTable() {
                     <td className="py-4 font-medium">
                       <StatusLabel label={status.label} color={status.color} />
                     </td>
+                    <td className="py-4 text-sm text-muted-foreground">{status.description ?? "—"}</td>
                     <td className="py-4 text-right">
                       {status.org_id === null ? (
                         <span className="text-xs text-muted-foreground">System</span>
@@ -375,6 +380,7 @@ export function StatusSettingsTable() {
                                 openModal("createStatus", {
                                   statusId: status.id,
                                   defaultLabel: status.label,
+                                  defaultDescription: status.description ?? "",
                                   defaultColor: status.color,
                                   onUpdated: handleStatusUpdated,
                                 });

@@ -16,6 +16,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabaseClient";
 import { cn } from "@/lib/utils";
 import type { TicketStatusRow } from "@/lib/useModal";
@@ -29,24 +30,36 @@ type CreateStatusModalProps = {
   onClose: () => void;
   statusId?: string;
   defaultLabel?: string;
+  defaultDescription?: string;
   defaultColor?: StatusColor;
   onCreated?: (status: TicketStatusRow) => void;
   onUpdated?: (status: TicketStatusRow) => void;
 };
 
-function getColorLabel(color: StatusColor) {
-  return color[0].toUpperCase() + color.slice(1);
+function normalizeOptional(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
 }
 
-export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defaultColor, onCreated, onUpdated }: CreateStatusModalProps) {
+export function CreateStatusModal({
+  open,
+  onClose,
+  statusId,
+  defaultLabel,
+  defaultDescription,
+  defaultColor,
+  onCreated,
+  onUpdated,
+}: CreateStatusModalProps) {
   const [label, setLabel] = useState(defaultLabel ?? "");
+  const [description, setDescription] = useState(defaultDescription ?? "");
   const [color, setColor] = useState<StatusColor>(defaultColor ?? "zinc");
   const [labelError, setLabelError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = Boolean(statusId);
 
-  const selectedColorText = useMemo(() => getColorLabel(color), [color]);
+  const statusPreviewLabel = useMemo(() => label.trim() || "Status", [label]);
 
   const handleCancel = () => {
     if (isSubmitting) {
@@ -98,6 +111,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
 
     const statusPayload = {
       label: trimmedLabel,
+      description: normalizeOptional(description),
       color,
     };
 
@@ -107,7 +121,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
           .update(statusPayload)
           .eq("id", statusId)
           .eq("org_id", profile.org_id)
-          .select("id, org_id, label, color, sort_order, is_active, created_at")
+          .select("id, org_id, label, description, color, sort_order, is_active, created_at")
           .single()
       : supabase
           .from("ticket_statuses")
@@ -117,7 +131,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
             sort_order: 0,
             is_active: true,
           })
-          .select("id, org_id, label, color, sort_order, is_active, created_at")
+          .select("id, org_id, label, description, color, sort_order, is_active, created_at")
           .single();
 
     const { data: savedStatus, error: saveError } = await request;
@@ -144,6 +158,7 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
     }
 
     setLabel(defaultLabel ?? "");
+    setDescription(defaultDescription ?? "");
     setColor(defaultColor ?? "zinc");
     setSubmitError("");
     onClose();
@@ -169,6 +184,16 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="status-description">Description</Label>
+            <Textarea
+              id="status-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="status-color">Color</Label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -179,25 +204,20 @@ export function CreateStatusModal({ open, onClose, statusId, defaultLabel, defau
                   className="w-full justify-between"
                   disabled={isSubmitting}
                 >
-                  <span className="flex items-center gap-2">
-                    <StatusLabel label={selectedColorText} color={color} />
-                  </span>
+                  <StatusLabel label={statusPreviewLabel} color={color} />
                   <ChevronsUpDown className="size-4 text-muted-foreground" aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width)">
-                {STATUS_COLOR_OPTIONS.map((colorOption) => {
-                  const colorText = getColorLabel(colorOption);
-                  return (
-                    <DropdownMenuItem
-                      key={colorOption}
-                      onSelect={() => setColor(colorOption)}
-                      className={cn("cursor-pointer", color === colorOption ? "bg-accent" : undefined)}
-                    >
-                      <StatusLabel label={colorText} color={colorOption} />
-                    </DropdownMenuItem>
-                  );
-                })}
+                {STATUS_COLOR_OPTIONS.map((colorOption) => (
+                  <DropdownMenuItem
+                    key={colorOption}
+                    onSelect={() => setColor(colorOption)}
+                    className={cn("cursor-pointer", color === colorOption ? "bg-accent" : undefined)}
+                  >
+                    <StatusLabel label={statusPreviewLabel} color={colorOption} />
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
