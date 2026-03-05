@@ -165,20 +165,20 @@ export default function TicketsPage() {
                     role="link"
                     aria-label={`Open ticket ${ticket.ticket_number}`}
                   >
-                    <td className="py-4">{ticket.ticket_number}</td>
-                    <td className="py-4 font-medium">{ticket.title}</td>
-                    <td className="py-4">{getStatusLabel(ticket.ticket_statuses)}</td>
-                    <td className="py-4">{getCategoryName(ticket.ticket_categories)}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{ticket.ticket_number}</td>
+                    <td className="max-w-0 truncate py-4 font-medium whitespace-nowrap">{ticket.title}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{getStatusLabel(ticket.ticket_statuses)}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{getCategoryName(ticket.ticket_categories)}</td>
                     <td className="py-4">
                       {requester ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex min-w-0 items-center gap-2">
                           <UserAvatar
                             userId={requester.id}
                             name={getProfileName(requester)}
                             avatarPath={requester.avatar_path}
                             className="size-7"
                           />
-                          <span>{getProfileName(requester)}</span>
+                          <span className="truncate">{getProfileName(requester)}</span>
                         </span>
                       ) : (
                         "—"
@@ -186,20 +186,20 @@ export default function TicketsPage() {
                     </td>
                     <td className="py-4">
                       {owner ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex min-w-0 items-center gap-2">
                           <UserAvatar
                             userId={owner.id}
                             name={getProfileName(owner)}
                             avatarPath={owner.avatar_path}
                             className="size-7"
                           />
-                          <span>{getProfileName(owner)}</span>
+                          <span className="truncate">{getProfileName(owner)}</span>
                         </span>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="py-4">{dateFormatter.format(new Date(ticket.created_at))}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{dateFormatter.format(new Date(ticket.created_at))}</td>
                   </tr>
                 );
               })}
