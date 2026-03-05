@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
-import { Ban, GripVertical, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
+import { Ban, GripVertical, Lock, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 
 import { StatusLabel } from "@/components/status-label";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ type TicketStatus = {
 };
 
 type StatusFilter = "active" | "inactive";
+
+const isSystemStatus = (status: TicketStatus) => status.org_id === null;
 
 function orderStatuses(statuses: TicketStatus[]) {
   return [...statuses].sort((a, b) => {
@@ -107,6 +109,9 @@ export function StatusSettingsTable() {
     () => statuses.filter((status) => (selectedFilter === "active" ? status.is_active : !status.is_active)),
     [statuses, selectedFilter]
   );
+
+  const visibleSystemStatuses = useMemo(() => visibleStatuses.filter(isSystemStatus), [visibleStatuses]);
+  const visibleCustomStatuses = useMemo(() => visibleStatuses.filter((status) => !isSystemStatus(status)), [visibleStatuses]);
 
   const isEmpty = useMemo(() => !loading && !errorMessage && visibleStatuses.length === 0, [errorMessage, loading, visibleStatuses.length]);
 
@@ -200,17 +205,17 @@ export function StatusSettingsTable() {
     setStatusUpdatingId(null);
   };
 
-  const persistOrder = async (orderedVisibleStatuses: TicketStatus[]) => {
+  const persistOrder = async (orderedCustomStatuses: TicketStatus[]) => {
     setSavingOrder(true);
 
-    const updates = orderedVisibleStatuses
-      .filter((status) => status.org_id !== null)
-      .map((status, index) =>
-        supabase
-          .from("ticket_statuses")
-          .update({ sort_order: index + 1 })
-          .eq("id", status.id)
-      );
+    const systemStatusCount = statuses.filter(isSystemStatus).length;
+
+    const updates = orderedCustomStatuses.map((status, index) =>
+      supabase
+        .from("ticket_statuses")
+        .update({ sort_order: systemStatusCount + index + 1 })
+        .eq("id", status.id)
+    );
 
     const results = await Promise.all(updates);
     const failedResult = results.find((result) => result.error);
@@ -219,8 +224,10 @@ export function StatusSettingsTable() {
       setErrorMessage(failedResult.error.message || "Unable to save status order");
     } else {
       setErrorMessage("");
-      const reorderedIds = orderedVisibleStatuses.map((status) => status.id);
-      const updatedById = new Map<string, TicketStatus>(orderedVisibleStatuses.map((status, index) => [status.id, { ...status, sort_order: index + 1 }]));
+      const reorderedIds = orderedCustomStatuses.map((status) => status.id);
+      const updatedById = new Map<string, TicketStatus>(
+        orderedCustomStatuses.map((status, index) => [status.id, { ...status, sort_order: systemStatusCount + index + 1 }])
+      );
 
       setStatuses((current) => {
         const unaffected = current.filter((status) => !reorderedIds.includes(status.id));
@@ -238,21 +245,21 @@ export function StatusSettingsTable() {
       return;
     }
 
-    const sourceIndex = visibleStatuses.findIndex((status) => status.id === draggingId);
-    const targetIndex = visibleStatuses.findIndex((status) => status.id === targetId);
+    const sourceIndex = visibleCustomStatuses.findIndex((status) => status.id === draggingId);
+    const targetIndex = visibleCustomStatuses.findIndex((status) => status.id === targetId);
 
     if (sourceIndex < 0 || targetIndex < 0) {
       return;
     }
 
-    const reordered = [...visibleStatuses];
+    const reordered = [...visibleCustomStatuses];
     const [moved] = reordered.splice(sourceIndex, 1);
     reordered.splice(targetIndex, 0, moved);
 
     setStatuses((current) => {
       const reorderedIds = reordered.map((status) => status.id);
       const unaffected = current.filter((status) => !reorderedIds.includes(status.id));
-      return [...unaffected, ...reordered];
+      return orderStatuses([...unaffected, ...reordered]);
     });
 
     void persistOrder(reordered);
@@ -304,7 +311,9 @@ export function StatusSettingsTable() {
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div>
             <CardTitle>Statuses</CardTitle>
-            <CardDescription>Reorder statuses using drag and drop. Changes save automatically.</CardDescription>
+            <CardDescription>
+              System statuses are locked to the top. You can reorder custom statuses beneath them and changes save automatically.
+            </CardDescription>
           </div>
           <Button
             type="button"
@@ -335,12 +344,15 @@ export function StatusSettingsTable() {
                 </tr>
               </thead>
               <tbody>
-                {visibleStatuses.map((status, index) => (
+                {[...visibleSystemStatuses, ...visibleCustomStatuses].map((status, index) => (
                   <tr
                     key={status.id}
                     className="border-b last:border-0"
-                    draggable={!savingOrder && status.org_id !== null}
+                    draggable={!savingOrder && !isSystemStatus(status)}
                     onDragStart={(event: DragEvent<HTMLTableRowElement>) => {
+                      if (isSystemStatus(status)) {
+                        return;
+                      }
                       setDraggingId(status.id);
                       event.dataTransfer.effectAllowed = "move";
                     }}
@@ -356,7 +368,7 @@ export function StatusSettingsTable() {
                   >
                     <td className="py-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <GripVertical className="h-4 w-4" aria-hidden="true" />
+                        {isSystemStatus(status) ? <Lock className="h-4 w-4" aria-hidden="true" /> : <GripVertical className="h-4 w-4" aria-hidden="true" />}
                         {index + 1}
                       </div>
                     </td>
