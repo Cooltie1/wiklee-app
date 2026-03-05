@@ -53,6 +53,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: false,
