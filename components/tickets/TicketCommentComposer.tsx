@@ -11,7 +11,6 @@ import {
   List,
   ListOrdered,
   SendHorizonal,
-  TextQuote,
   Unlink,
 } from "lucide-react";
 
@@ -39,6 +38,7 @@ function FormatButton({
       size="icon-sm"
       variant={isActive ? "secondary" : "ghost"}
       className={cn("h-8 w-8", isActive ? "bg-zinc-200 text-zinc-900" : "")}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >
       {children}
@@ -51,6 +51,8 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   const [isEmpty, setIsEmpty] = useState(true);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isFormatOpen, setIsFormatOpen] = useState(false);
+  const [, setSelectionVersion] = useState(0);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -70,13 +72,16 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     editorProps: {
       attributes: {
         class:
-          "min-h-[96px] w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus-visible:border-zinc-400",
+          "min-h-[96px] w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus-visible:border-zinc-400 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal",
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
       setIsEmpty(currentEditor.getText().trim().length === 0);
       setFeedbackMessage(null);
       setErrorMessage(null);
+    },
+    onSelectionUpdate: () => {
+      setSelectionVersion((version) => version + 1);
     },
   });
 
@@ -139,14 +144,13 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
-        <Popover>
+        <Popover open={isFormatOpen} onOpenChange={setIsFormatOpen}>
           <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="outline">
-              <TextQuote className="h-4 w-4" />
-              Format
+            <Button type="button" size="sm" variant="outline" aria-label="Toggle formatting controls">
+              T
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-auto p-2">
+          <PopoverContent side="right" align="start" className="w-auto p-2">
             <div className="flex items-center gap-1">
               <FormatButton isActive={editor?.isActive("bold") ?? false} onClick={() => editor?.chain().focus().toggleBold().run()}>
                 <Bold className="h-4 w-4" />
@@ -184,9 +188,14 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
           {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
           {feedbackMessage ? <p className="text-sm text-green-600">{feedbackMessage}</p> : null}
         </div>
-        <Button type="button" onClick={handleSubmit} disabled={isSaving || isEmpty || !editor}>
+        <Button
+          type="button"
+          size="icon-sm"
+          onClick={handleSubmit}
+          disabled={isSaving || isEmpty || !editor}
+          aria-label={isSaving ? "Posting comment" : "Post comment"}
+        >
           <SendHorizonal className="h-4 w-4" />
-          {isSaving ? "Posting..." : "Post comment"}
         </Button>
       </div>
     </div>
