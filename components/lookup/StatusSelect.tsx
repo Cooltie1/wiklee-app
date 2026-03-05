@@ -61,7 +61,7 @@ export function StatusSelect({ value, onChange, showLabel = true, triggerClassNa
       const { data, error } = await supabase
         .from("ticket_statuses")
         .select("id, label, sort_order, created_at")
-        .eq("org_id", profile.org_id)
+        .or(`org_id.eq.${profile.org_id},org_id.is.null`)
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });

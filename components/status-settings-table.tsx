@@ -12,6 +12,7 @@ import { useModal, type TicketStatusRow } from "@/lib/useModal";
 
 type TicketStatus = {
   id: string;
+  org_id: string | null;
   label: string;
   sort_order: number | null;
   is_active: boolean;
@@ -75,8 +76,8 @@ export function StatusSettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_statuses")
-        .select("id, label, sort_order, is_active")
-        .eq("org_id", profile.org_id);
+        .select("id, org_id, label, sort_order, is_active")
+        .or(`org_id.eq.${profile.org_id},org_id.is.null`);
 
       if (error) {
         if (isMounted) {
@@ -119,6 +120,7 @@ export function StatusSettingsTable() {
         ...current,
         {
           id: status.id,
+          org_id: status.org_id,
           label: status.label,
           sort_order: status.sort_order,
           is_active: status.is_active,
@@ -134,6 +136,7 @@ export function StatusSettingsTable() {
           existingStatus.id === status.id
             ? {
                 ...existingStatus,
+                org_id: status.org_id,
                 label: status.label,
                 sort_order: status.sort_order,
                 is_active: status.is_active,
@@ -193,12 +196,14 @@ export function StatusSettingsTable() {
   const persistOrder = async (orderedVisibleStatuses: TicketStatus[]) => {
     setSavingOrder(true);
 
-    const updates = orderedVisibleStatuses.map((status, index) =>
+    const updates = orderedVisibleStatuses
+      .filter((status) => status.org_id !== null)
+      .map((status, index) =>
       supabase
         .from("ticket_statuses")
         .update({ sort_order: index + 1 })
         .eq("id", status.id)
-    );
+      );
 
     const results = await Promise.all(updates);
     const failedResult = results.find((result) => result.error);
@@ -327,7 +332,7 @@ export function StatusSettingsTable() {
                   <tr
                     key={status.id}
                     className="border-b last:border-0"
-                    draggable={!savingOrder}
+                    draggable={!savingOrder && status.org_id !== null}
                     onDragStart={(event: DragEvent<HTMLTableRowElement>) => {
                       setDraggingId(status.id);
                       event.dataTransfer.effectAllowed = "move";
@@ -351,68 +356,72 @@ export function StatusSettingsTable() {
                     <td className="py-4 font-mono text-xs text-muted-foreground">{status.id}</td>
                     <td className="py-4 font-medium">{status.label}</td>
                     <td className="py-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label={`Open actions for ${status.label}`}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              openModal("createStatus", {
-                                statusId: status.id,
-                                defaultLabel: status.label,
-                                onUpdated: handleStatusUpdated,
-                              });
-                            }}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Edit
-                          </DropdownMenuItem>
-                          {status.is_active ? (
+                      {status.org_id === null ? (
+                        <span className="text-xs text-muted-foreground">System</span>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label={`Open actions for ${status.label}`}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
                               onSelect={() => {
-                                openModal("deactivateStatus", {
+                                openModal("createStatus", {
                                   statusId: status.id,
-                                  statusLabel: status.label,
-                                  onDeactivated: handleStatusDeactivated,
+                                  defaultLabel: status.label,
+                                  onUpdated: handleStatusUpdated,
                                 });
                               }}
                             >
-                              <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
-                              Deactivate
+                              <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                              Edit
                             </DropdownMenuItem>
-                          ) : (
-                            <>
-                              <DropdownMenuItem
-                                className="text-emerald-700 focus:text-emerald-700"
-                                disabled={statusUpdatingId === status.id}
-                                onSelect={() => {
-                                  void handleStatusActivated(status.id);
-                                }}
-                              >
-                                <Power className="mr-2 h-4 w-4" aria-hidden="true" />
-                                {statusUpdatingId === status.id ? "Activating..." : "Activate"}
-                              </DropdownMenuItem>
+                            {status.is_active ? (
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
                                 onSelect={() => {
-                                  openModal("deleteStatus", {
+                                  openModal("deactivateStatus", {
                                     statusId: status.id,
                                     statusLabel: status.label,
-                                    onDeleted: handleStatusDeleted,
+                                    onDeactivated: handleStatusDeactivated,
                                   });
                                 }}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                                Delete
+                                <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Deactivate
                               </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            ) : (
+                              <>
+                                <DropdownMenuItem
+                                  className="text-emerald-700 focus:text-emerald-700"
+                                  disabled={statusUpdatingId === status.id}
+                                  onSelect={() => {
+                                    void handleStatusActivated(status.id);
+                                  }}
+                                >
+                                  <Power className="mr-2 h-4 w-4" aria-hidden="true" />
+                                  {statusUpdatingId === status.id ? "Activating..." : "Activate"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onSelect={() => {
+                                    openModal("deleteStatus", {
+                                      statusId: status.id,
+                                      statusLabel: status.label,
+                                      onDeleted: handleStatusDeleted,
+                                    });
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </td>
                   </tr>
                 ))}
