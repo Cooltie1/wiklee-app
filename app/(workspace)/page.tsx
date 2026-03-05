@@ -33,8 +33,8 @@ function getStatus(status: TicketRow["ticket_statuses"]) {
 }
 
 function getCategoryName(category: TicketRow["ticket_categories"]) {
-  if (!category) return "Uncategorized";
-  return Array.isArray(category) ? category[0]?.name ?? "Uncategorized" : category.name;
+  if (!category) return "—";
+  return Array.isArray(category) ? category[0]?.name ?? "—" : category.name;
 }
 
 function getProfileName(profile?: ProfileRow) {
