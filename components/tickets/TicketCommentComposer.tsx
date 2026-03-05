@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/lib/supabaseClient";
 import { cn } from "@/lib/utils";
 
@@ -143,42 +142,44 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
-        <Popover open={isFormatOpen} onOpenChange={setIsFormatOpen}>
-          <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="outline" aria-label="Toggle formatting controls">
-              T
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent side="right" align="start" className="w-auto p-2">
-            <div className="flex items-center gap-1">
-              <FormatButton isActive={editor?.isActive("bold") ?? false} onClick={() => editor?.chain().focus().toggleBold().run()}>
-                <Bold className="h-4 w-4" />
-              </FormatButton>
-              <FormatButton
-                isActive={editor?.isActive("italic") ?? false}
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-              >
-                <Italic className="h-4 w-4" />
-              </FormatButton>
-              <FormatButton
-                isActive={editor?.isActive("bulletList") ?? false}
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-              >
-                <List className="h-4 w-4" />
-              </FormatButton>
-              <FormatButton
-                isActive={editor?.isActive("orderedList") ?? false}
-                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-              >
-                <ListOrdered className="h-4 w-4" />
-              </FormatButton>
-              <FormatButton isActive={editor?.isActive("link") ?? false} onClick={handleSetOrUnsetLink}>
-                {editor?.isActive("link") ? <Unlink className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
-              </FormatButton>
-            </div>
-          </PopoverContent>
-        </Popover>
+      <div className="mb-2 flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label="Toggle formatting controls"
+          onClick={() => setIsFormatOpen((open) => !open)}
+        >
+          Format
+        </Button>
+        {isFormatOpen ? (
+          <div className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-1">
+            <FormatButton isActive={editor?.isActive("bold") ?? false} onClick={() => editor?.chain().focus().toggleBold().run()}>
+              <Bold className="h-4 w-4" />
+            </FormatButton>
+            <FormatButton
+              isActive={editor?.isActive("italic") ?? false}
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+            >
+              <Italic className="h-4 w-4" />
+            </FormatButton>
+            <FormatButton
+              isActive={editor?.isActive("bulletList") ?? false}
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            >
+              <List className="h-4 w-4" />
+            </FormatButton>
+            <FormatButton
+              isActive={editor?.isActive("orderedList") ?? false}
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+            >
+              <ListOrdered className="h-4 w-4" />
+            </FormatButton>
+            <FormatButton isActive={editor?.isActive("link") ?? false} onClick={handleSetOrUnsetLink}>
+              {editor?.isActive("link") ? <Unlink className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+            </FormatButton>
+          </div>
+        ) : null}
       </div>
 
       <EditorContent editor={editor} />
