@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DragEvent, useEffect, useMemo, useState } from "react";
 import { Ban, GripVertical, MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 
+import { StatusLabel } from "@/components/status-label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,22 +21,6 @@ type TicketStatus = {
 };
 
 type StatusFilter = "active" | "inactive";
-
-
-function getStatusColorClassName(color: TicketStatusRow["color"]) {
-  switch (color) {
-    case "green":
-      return "bg-green-500";
-    case "amber":
-      return "bg-amber-500";
-    case "red":
-      return "bg-red-500";
-    case "blue":
-      return "bg-blue-500";
-    default:
-      return "bg-zinc-500";
-  }
-}
 
 function orderStatuses(statuses: TicketStatus[]) {
   return [...statuses].sort((a, b) => {
@@ -374,10 +359,7 @@ export function StatusSettingsTable() {
                     </td>
                     <td className="py-4 font-mono text-xs text-muted-foreground">{status.id}</td>
                     <td className="py-4 font-medium">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2.5 w-2.5 rounded-full ${getStatusColorClassName(status.color)}`} aria-hidden="true" />
-                        <span>{status.label}</span>
-                      </div>
+                      <StatusLabel label={status.label} color={status.color} />
                     </td>
                     <td className="py-4 text-right">
                       {status.org_id === null ? (
