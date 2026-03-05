@@ -36,7 +36,7 @@ function FormatButton({
       type="button"
       size="icon-sm"
       variant={isActive ? "secondary" : "ghost"}
-      className={cn("h-8 w-8", isActive ? "bg-zinc-200 text-zinc-900" : "")}
+      className={cn("h-8 w-8 rounded-none", isActive ? "bg-zinc-200 text-zinc-900" : "")}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >
@@ -157,7 +157,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
           T
         </Button>
         {isFormatOpen ? (
-          <div className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-1">
+          <div className="flex items-center gap-0 overflow-hidden rounded-md border border-zinc-200 bg-white">
             <FormatButton isActive={editor?.isActive("bold") ?? false} onClick={() => editor?.chain().focus().toggleBold().run()}>
               <Bold className="h-4 w-4" />
             </FormatButton>
