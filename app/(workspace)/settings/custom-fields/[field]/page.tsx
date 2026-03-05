@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CategorySettingsTable } from "@/components/category-settings-table";
+import { StatusSettingsTable } from "@/components/status-settings-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type FieldConfig = {
@@ -38,6 +39,10 @@ export default async function SystemFieldPage({ params }: { params: Promise<{ fi
 
   if (field === "category") {
     return <CategorySettingsTable />;
+  }
+
+  if (field === "status") {
+    return <StatusSettingsTable />;
   }
 
   return (

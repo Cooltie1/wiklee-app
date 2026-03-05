@@ -12,6 +12,17 @@ export type TicketCategoryRow = {
   created_at: string;
 };
 
+
+
+export type TicketStatusRow = {
+  id: string;
+  org_id: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type ModalRegistry = {
   createCategory: {
     categoryId?: string;
@@ -29,6 +40,22 @@ export type ModalRegistry = {
     categoryId: string;
     categoryName: string;
     onDeleted?: (categoryId: string) => void;
+  };
+  createStatus: {
+    statusId?: string;
+    defaultLabel?: string;
+    onCreated?: (status: TicketStatusRow) => void;
+    onUpdated?: (status: TicketStatusRow) => void;
+  };
+  deactivateStatus: {
+    statusId: string;
+    statusLabel: string;
+    onDeactivated?: (statusId: string) => void;
+  };
+  deleteStatus: {
+    statusId: string;
+    statusLabel: string;
+    onDeleted?: (statusId: string) => void;
   };
 };
 
