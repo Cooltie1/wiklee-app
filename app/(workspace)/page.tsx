@@ -48,6 +48,10 @@ export default function TicketsPage() {
   const router = useRouter();
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, ProfileRow>>({});
+  const [sortKey, setSortKey] = useState<"ticket_number" | "title" | "status" | "category" | "requester" | "owner" | "created_at">(
+    "created_at"
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +119,59 @@ export default function TicketsPage() {
     void loadWorkspaceData();
   }, []);
 
+  const sortedTickets = useMemo(() => {
+    const directionMultiplier = sortDirection === "asc" ? 1 : -1;
+
+    const getComparableValue = (ticket: TicketRow) => {
+      const requester = ticket.requester_id ? profilesById[ticket.requester_id] : undefined;
+      const owner = ticket.owner_id ? profilesById[ticket.owner_id] : undefined;
+      const status = getStatus(ticket.ticket_statuses)?.label ?? "";
+
+      switch (sortKey) {
+        case "ticket_number":
+          return ticket.ticket_number;
+        case "title":
+          return ticket.title;
+        case "status":
+          return status;
+        case "category":
+          return getCategoryName(ticket.ticket_categories);
+        case "requester":
+          return getProfileName(requester);
+        case "owner":
+          return getProfileName(owner);
+        case "created_at":
+          return new Date(ticket.created_at).getTime();
+      }
+    };
+
+    return [...tickets].sort((a, b) => {
+      const aValue = getComparableValue(a);
+      const bValue = getComparableValue(b);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return (aValue - bValue) * directionMultiplier;
+      }
+
+      return String(aValue).localeCompare(String(bValue), undefined, { sensitivity: "base" }) * directionMultiplier;
+    });
+  }, [profilesById, sortDirection, sortKey, tickets]);
+
+  const handleSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setSortDirection((currentDirection) => (currentDirection === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection("asc");
+  };
+
+  const getSortIndicator = (key: typeof sortKey) => {
+    if (sortKey !== key) return "";
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
+
   return (
     <section className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
       <div>
@@ -132,17 +189,17 @@ export default function TicketsPage() {
           <table className="w-full table-fixed text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-zinc-500">
-                <th className="py-3">Ticket Number</th>
-                <th className="py-3">Title</th>
-                <th className="py-3">Status</th>
-                <th className="py-3">Category</th>
-                <th className="py-3">Requester</th>
-                <th className="py-3">Owner</th>
-                <th className="py-3">Created At</th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("ticket_number")}>Ticket Number{getSortIndicator("ticket_number")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("title")}>Title{getSortIndicator("title")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("status")}>Status{getSortIndicator("status")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("category")}>Category{getSortIndicator("category")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("requester")}>Requester{getSortIndicator("requester")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("owner")}>Owner{getSortIndicator("owner")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("created_at")}>Created At{getSortIndicator("created_at")}</button></th>
               </tr>
             </thead>
             <tbody>
-              {tickets.map((ticket) => {
+              {sortedTickets.map((ticket) => {
                 const requester = ticket.requester_id ? profilesById[ticket.requester_id] : undefined;
                 const owner = ticket.owner_id ? profilesById[ticket.owner_id] : undefined;
                 const status = getStatus(ticket.ticket_statuses);
