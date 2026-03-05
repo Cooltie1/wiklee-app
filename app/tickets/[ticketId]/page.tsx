@@ -156,8 +156,9 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         </div>
       </aside>
 
-      <div className="h-full overflow-auto bg-white p-6">
-        <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
+      <div className="flex h-full min-h-0 flex-col bg-white">
+        <div className="border-b border-zinc-100 px-6 pb-6 pt-6">
+          <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
           <ol className="flex items-center gap-2">
             <li>
               <Link href="/" className="hover:text-zinc-900 hover:underline">
@@ -167,15 +168,21 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
             <li aria-hidden="true">/</li>
             <li className="text-zinc-900">#{ticket.ticket_number}</li>
           </ol>
-        </nav>
+          </nav>
 
-        <h1 className="mt-4 text-3xl font-bold">{ticket.title}</h1>
+          <h1 className="mt-4 text-3xl font-bold">{ticket.title}</h1>
+        </div>
 
-        <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col gap-6 pb-4">
-          <div className="flex min-h-[280px] items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-500">
-            No updates yet.
+        <div className="min-h-0 flex-1 overflow-auto px-6">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
+            <div className="mt-8 flex min-h-[280px] items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-500">
+              No updates yet.
+            </div>
+
+            <div className="sticky bottom-0 mt-auto bg-white pb-4 pt-4">
+              <TicketReplyEditor />
+            </div>
           </div>
-          <TicketReplyEditor />
         </div>
       </div>
     </div>
