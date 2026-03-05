@@ -29,6 +29,7 @@ type LookupDropdownProps<T extends LookupItem> = {
     label: string;
     onClick: () => void;
   };
+  triggerClassName?: string;
 };
 
 export function LookupDropdown<T extends LookupItem>({
@@ -45,6 +46,7 @@ export function LookupDropdown<T extends LookupItem>({
   allowClear,
   clearLabel = "None",
   action,
+  triggerClassName,
 }: LookupDropdownProps<T>) {
   const [open, setOpen] = useState(false);
 
@@ -61,7 +63,7 @@ export function LookupDropdown<T extends LookupItem>({
           role="combobox"
           aria-expanded={open}
           disabled={isDisabled}
-          className="w-full justify-between"
+          className={cn("w-full justify-between", triggerClassName)}
         >
           {selectedItem ? (
             <span className="truncate">{getItemLabel(selectedItem)}</span>

@@ -10,6 +10,9 @@ import { RequesterSelect } from "@/components/RequesterSelect";
 import { Button } from "@/components/ui/button";
 import type { ComboboxUser } from "@/components/UserCombobox";
 import { CategorySelect } from "@/components/lookup/CategorySelect";
+import { PrioritySelect } from "@/components/lookup/PrioritySelect";
+import { StatusSelect } from "@/components/lookup/StatusSelect";
+import { Input } from "@/components/ui/input";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
@@ -22,6 +25,8 @@ type TicketRow = {
   requester_id: string | null;
   owner_id: string | null;
   category_id: string | null;
+  priority_id: string | null;
+  status_id: string | null;
 };
 
 type ProfileRow = {
@@ -119,9 +124,53 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
     },
   });
 
-  const isAnySaving = [requesterAutosave.status, ownerAutosave.status, categoryAutosave.status].includes("saving");
-  const isAnySaved = [requesterAutosave.status, ownerAutosave.status, categoryAutosave.status].includes("saved");
-  const autosaveError = requesterAutosave.errorMessage || ownerAutosave.errorMessage || categoryAutosave.errorMessage;
+  const priorityAutosave = useFieldAutosave<string | null>({
+    initialValue: ticket.priority_id,
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("tickets").update({ priority_id: nextValue }).eq("id", ticket.id);
+      if (error) throw new Error(error.message);
+    },
+  });
+
+  const statusAutosave = useFieldAutosave<string | null>({
+    initialValue: ticket.status_id,
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("tickets").update({ status_id: nextValue }).eq("id", ticket.id);
+      if (error) throw new Error(error.message);
+    },
+  });
+
+  const titleAutosave = useFieldAutosave<string>({
+    initialValue: ticket.title,
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("tickets").update({ title: nextValue }).eq("id", ticket.id);
+      if (error) throw new Error(error.message);
+    },
+  });
+
+  const isAnySaving = [
+    requesterAutosave.status,
+    ownerAutosave.status,
+    categoryAutosave.status,
+    priorityAutosave.status,
+    statusAutosave.status,
+    titleAutosave.status,
+  ].includes("saving");
+  const isAnySaved = [
+    requesterAutosave.status,
+    ownerAutosave.status,
+    categoryAutosave.status,
+    priorityAutosave.status,
+    statusAutosave.status,
+    titleAutosave.status,
+  ].includes("saved");
+  const autosaveError =
+    requesterAutosave.errorMessage ||
+    ownerAutosave.errorMessage ||
+    categoryAutosave.errorMessage ||
+    priorityAutosave.errorMessage ||
+    statusAutosave.errorMessage ||
+    titleAutosave.errorMessage;
 
   const sidebarStatus = useMemo(() => {
     if (isAnySaving) return "Saving...";
@@ -148,6 +197,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
             disabled={!ownerUsers.length}
           />
           <CategorySelect value={categoryAutosave.currentValue} onChange={categoryAutosave.setValue} />
+          <PrioritySelect value={priorityAutosave.currentValue} onChange={priorityAutosave.setValue} />
         </div>
 
         <div className="mt-6 space-y-1 text-xs">
@@ -158,19 +208,32 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
       <div className="flex h-full min-h-0 flex-col bg-white">
         <div className="border-b border-zinc-100 px-6 pb-6 pt-6">
-          <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-2">
-            <li>
-              <Link href="/" className="hover:text-zinc-900 hover:underline">
-                Tickets
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li className="text-zinc-900">#{ticket.ticket_number}</li>
-          </ol>
-          </nav>
+          <div className="flex items-start justify-between gap-4">
+            <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
+              <ol className="flex items-center gap-2">
+                <li>
+                  <Link href="/" className="hover:text-zinc-900 hover:underline">
+                    Tickets
+                  </Link>
+                </li>
+                <li aria-hidden="true">/</li>
+                <li className="text-zinc-900">#{ticket.ticket_number}</li>
+              </ol>
+            </nav>
+            <StatusSelect
+              value={statusAutosave.currentValue}
+              onChange={statusAutosave.setValue}
+              showLabel={false}
+              triggerClassName="w-auto min-w-36 rounded-full border-zinc-300 px-4"
+            />
+          </div>
 
-          <h1 className="mt-4 text-3xl font-bold">{ticket.title}</h1>
+          <Input
+            value={titleAutosave.currentValue}
+            onChange={(event) => titleAutosave.setValue(event.target.value)}
+            className="mt-4 h-auto border-0 p-0 text-2xl font-semibold shadow-none focus-visible:ring-0"
+            aria-label="Ticket title"
+          />
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-6">
@@ -212,7 +275,7 @@ export default function TicketDetailPage() {
           supabase.auth.getUser(),
           supabase
             .from("tickets")
-            .select("id, ticket_number, title, description, requester_id, owner_id, category_id")
+            .select("id, ticket_number, title, description, requester_id, owner_id, category_id, priority_id, status_id")
             .eq("id", ticketId)
             .single(),
           supabase.from("profiles").select("id, first_name, last_name, avatar_path, role"),
