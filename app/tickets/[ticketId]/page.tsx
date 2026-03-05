@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import AppShell from "@/components/app-shell";
 import { OwnerSelect } from "@/components/OwnerSelect";
 import { RequesterSelect } from "@/components/RequesterSelect";
+import { Button } from "@/components/ui/button";
 import type { ComboboxUser } from "@/components/UserCombobox";
 import { CategorySelect } from "@/components/lookup/CategorySelect";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
@@ -37,6 +38,61 @@ type TicketDetailContentProps = {
   requesterUsers: ComboboxUser[];
   ownerUsers: ComboboxUser[];
 };
+
+function TicketReplyEditor() {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const [editorHtml, setEditorHtml] = useState("");
+
+  function updateEditorHeight() {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.style.height = "auto";
+    const nextHeight = Math.min(editor.scrollHeight, 220);
+    editor.style.height = `${Math.max(nextHeight, 40)}px`;
+    editor.style.overflowY = editor.scrollHeight > 220 ? "auto" : "hidden";
+  }
+
+  function handleInput() {
+    const nextHtml = editorRef.current?.innerHTML ?? "";
+    setEditorHtml(nextHtml);
+    updateEditorHeight();
+  }
+
+  function handleSend() {
+    if (!editorRef.current) return;
+    editorRef.current.innerHTML = "";
+    setEditorHtml("");
+    updateEditorHeight();
+    editorRef.current.focus();
+  }
+
+  const isEmpty = !editorHtml.replace(/<br\s*\/?>(?=\s*<\/div>|$)/gi, "").replace(/<[^>]+>/g, "").trim();
+
+  return (
+    <div className="relative rounded-xl border border-zinc-300 bg-white shadow-sm transition focus-within:border-zinc-400">
+      <div
+        ref={editorRef}
+        contentEditable
+        role="textbox"
+        aria-label="Reply to ticket"
+        data-placeholder="Write a reply..."
+        className="max-h-[220px] min-h-10 w-full overflow-hidden px-3 py-2 pr-20 text-sm outline-none empty:before:pointer-events-none empty:before:text-zinc-400 empty:before:content-[attr(data-placeholder)]"
+        onInput={handleInput}
+      />
+
+      <Button
+        type="button"
+        size="sm"
+        className="absolute bottom-2 right-2 h-7 rounded-md px-3"
+        onClick={handleSend}
+        disabled={isEmpty}
+      >
+        Send
+      </Button>
+    </div>
+  );
+}
 
 function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers }: TicketDetailContentProps) {
   const requesterAutosave = useFieldAutosave<string | null>({
@@ -100,8 +156,9 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         </div>
       </aside>
 
-      <div className="h-full overflow-auto bg-white p-6">
-        <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
+      <div className="flex h-full min-h-0 flex-col bg-white">
+        <div className="border-b border-zinc-100 px-6 pb-6 pt-6">
+          <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
           <ol className="flex items-center gap-2">
             <li>
               <Link href="/" className="hover:text-zinc-900 hover:underline">
@@ -111,10 +168,22 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
             <li aria-hidden="true">/</li>
             <li className="text-zinc-900">#{ticket.ticket_number}</li>
           </ol>
-        </nav>
+          </nav>
 
-        <h1 className="mt-4 text-3xl font-bold">{ticket.title}</h1>
-        <p className="mt-4 whitespace-pre-wrap text-sm text-zinc-700">{ticket.description || "No description provided."}</p>
+          <h1 className="mt-4 text-3xl font-bold">{ticket.title}</h1>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto px-6">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
+            <div className="mt-8 flex min-h-[280px] items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-500">
+              No updates yet.
+            </div>
+
+            <div className="sticky bottom-0 mt-auto bg-white pb-4 pt-4">
+              <TicketReplyEditor />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
