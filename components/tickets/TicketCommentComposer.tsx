@@ -82,6 +82,9 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     onSelectionUpdate: () => {
       setSelectionVersion((version) => version + 1);
     },
+    onTransaction: () => {
+      setSelectionVersion((version) => version + 1);
+    },
   });
 
   async function handleSubmit() {
@@ -145,12 +148,13 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
       <div className="mb-2 flex items-center gap-2">
         <Button
           type="button"
-          size="sm"
+          size="icon-sm"
           variant="outline"
+          className="h-8 w-8"
           aria-label="Toggle formatting controls"
           onClick={() => setIsFormatOpen((open) => !open)}
         >
-          Format
+          T
         </Button>
         {isFormatOpen ? (
           <div className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-1">
