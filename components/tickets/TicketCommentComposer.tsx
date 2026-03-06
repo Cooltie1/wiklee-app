@@ -19,6 +19,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type TicketCommentComposerProps = {
@@ -51,8 +52,6 @@ function FormatButton({
 export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFormatOpen, setIsFormatOpen] = useState(false);
   const [isInternal, setIsInternal] = useState(false);
   const [, setSelectionVersion] = useState(0);
@@ -83,8 +82,6 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     },
     onUpdate: ({ editor: currentEditor }) => {
       setIsEmpty(currentEditor.getText().trim().length === 0);
-      setFeedbackMessage(null);
-      setErrorMessage(null);
     },
     onSelectionUpdate: () => {
       setSelectionVersion((version) => version + 1);
@@ -98,8 +95,6 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     if (!editor || isSaving || isEmpty) return;
 
     setIsSaving(true);
-    setErrorMessage(null);
-    setFeedbackMessage(null);
 
     const {
       data: { user },
@@ -108,7 +103,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
 
     if (authError || !user) {
       console.error(authError);
-      setErrorMessage("Unable to determine current user. Please refresh and try again.");
+      toast.error("Unable to determine current user. Please refresh and try again.");
       setIsSaving(false);
       return;
     }
@@ -124,14 +119,14 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
 
     if (error) {
       console.error(error);
-      setErrorMessage("Failed to post comment. Please try again.");
+      toast.error("Failed to post comment. Please try again.");
       setIsSaving(false);
       return;
     }
 
     editor.commands.clearContent(true);
     setIsInternal(false);
-    setFeedbackMessage("Success! Comment posted.");
+    toast.success("Comment posted.");
     setIsSaving(false);
   }
 
@@ -219,10 +214,6 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
             ) : null}
           </div>
 
-          <div>
-            {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}
-            {feedbackMessage ? <p className="text-xs text-green-600">{feedbackMessage}</p> : null}
-          </div>
         </div>
         <Button
           type="button"
