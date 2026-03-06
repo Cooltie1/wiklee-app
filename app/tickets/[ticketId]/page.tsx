@@ -141,6 +141,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
             onChange={ownerAutosave.setValue}
             disabled={!ownerUsers.length}
           />
+          <StatusSelect value={statusAutosave.currentValue} onChange={statusAutosave.setValue} />
           <CategorySelect value={categoryAutosave.currentValue} onChange={categoryAutosave.setValue} />
           <PrioritySelect value={priorityAutosave.currentValue} onChange={priorityAutosave.setValue} />
         </div>
@@ -153,25 +154,17 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
       <div className="flex h-full min-h-0 flex-col bg-white">
         <div className="border-b border-zinc-100 px-6 pb-6 pt-6">
-          <div className="flex items-start justify-between gap-4">
-            <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
-              <ol className="flex items-center gap-2">
-                <li>
-                  <Link href="/" className="hover:text-zinc-900 hover:underline">
-                    Tickets
-                  </Link>
-                </li>
-                <li aria-hidden="true">/</li>
-                <li className="text-zinc-900">#{ticket.ticket_number}</li>
-              </ol>
-            </nav>
-            <StatusSelect
-              value={statusAutosave.currentValue}
-              onChange={statusAutosave.setValue}
-              showLabel={false}
-              triggerClassName="w-auto min-w-36 rounded-full border-zinc-300 px-4"
-            />
-          </div>
+          <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
+            <ol className="flex items-center gap-2">
+              <li>
+                <Link href="/" className="hover:text-zinc-900 hover:underline">
+                  Tickets
+                </Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li className="text-zinc-900">#{ticket.ticket_number}</li>
+            </ol>
+          </nav>
 
           <Input
             value={titleAutosave.currentValue}

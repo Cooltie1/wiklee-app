@@ -16,11 +16,9 @@ type Status = {
 type StatusSelectProps = {
   value: string | null;
   onChange: (id: string | null) => void;
-  showLabel?: boolean;
-  triggerClassName?: string;
 };
 
-export function StatusSelect({ value, onChange, showLabel = true, triggerClassName }: StatusSelectProps) {
+export function StatusSelect({ value, onChange }: StatusSelectProps) {
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -90,7 +88,7 @@ export function StatusSelect({ value, onChange, showLabel = true, triggerClassNa
 
   return (
     <div className="space-y-2">
-      {showLabel ? <Label htmlFor="status">Status</Label> : null}
+      <Label htmlFor="status">Status</Label>
       <div id="status">
         <LookupDropdown
           items={statuses}
@@ -101,7 +99,6 @@ export function StatusSelect({ value, onChange, showLabel = true, triggerClassNa
           searchable={false}
           emptyText="No statuses found"
           loading={isLoading}
-          triggerClassName={triggerClassName}
         />
       </div>
       {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}
