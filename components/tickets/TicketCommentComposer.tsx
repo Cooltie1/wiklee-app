@@ -6,10 +6,12 @@ import Link from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
 import {
   Bold,
+  Check,
   Italic,
   Link2,
   List,
   ListOrdered,
+  Pilcrow,
   SendHorizonal,
   Unlink,
 } from "lucide-react";
@@ -51,6 +53,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFormatOpen, setIsFormatOpen] = useState(false);
+  const [isInternal, setIsInternal] = useState(false);
   const [, setSelectionVersion] = useState(0);
 
   const editor = useEditor({
@@ -115,7 +118,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
       ticket_id: ticketId,
       author_id: user.id,
       body,
-      is_internal: false,
+      is_internal: isInternal,
     });
 
     if (error) {
@@ -126,6 +129,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     }
 
     editor.commands.clearContent(true);
+    setIsInternal(false);
     setFeedbackMessage("Success! Comment posted.");
     setIsSaving(false);
   }
@@ -157,13 +161,29 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
           <div className="flex items-center gap-1">
             <Button
               type="button"
+              size="sm"
+              variant={isInternal ? "secondary" : "ghost"}
+              className={cn(
+                "h-7 rounded-md px-2 text-xs",
+                isInternal ? "bg-zinc-200 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100",
+              )}
+              onClick={() => setIsInternal((active) => !active)}
+            >
+              <Check className="h-3.5 w-3.5" />
+              Internal note
+            </Button>
+            <Button
+              type="button"
               size="icon-sm"
-              variant="ghost"
-              className="h-7 w-7 rounded-md text-zinc-600 hover:bg-zinc-100"
+              variant={isFormatOpen ? "secondary" : "ghost"}
+              className={cn(
+                "h-7 w-7 rounded-md",
+                isFormatOpen ? "bg-zinc-200 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100",
+              )}
               aria-label="Toggle formatting controls"
               onClick={() => setIsFormatOpen((open) => !open)}
             >
-              T
+              <Pilcrow className="h-4 w-4" />
             </Button>
             {isFormatOpen ? (
               <div className="flex items-center gap-0 rounded-md">
