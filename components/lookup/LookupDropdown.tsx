@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,9 @@ type LookupDropdownProps<T extends LookupItem> = {
     onClick: () => void;
   };
   triggerClassName?: string;
+  renderSelected?: (item: T) => ReactNode;
+  renderItem?: (item: T) => ReactNode;
+  showSelectionIndicator?: boolean;
 };
 
 export function LookupDropdown<T extends LookupItem>({
@@ -47,6 +50,9 @@ export function LookupDropdown<T extends LookupItem>({
   clearLabel = "None",
   action,
   triggerClassName,
+  renderSelected,
+  renderItem,
+  showSelectionIndicator = true,
 }: LookupDropdownProps<T>) {
   const [open, setOpen] = useState(false);
 
@@ -66,7 +72,11 @@ export function LookupDropdown<T extends LookupItem>({
           className={cn("w-full justify-between", triggerClassName)}
         >
           {selectedItem ? (
-            <span className="truncate">{getItemLabel(selectedItem)}</span>
+            renderSelected ? (
+              <span className="min-w-0 flex-1 text-left">{renderSelected(selectedItem)}</span>
+            ) : (
+              <span className="truncate text-left">{getItemLabel(selectedItem)}</span>
+            )
           ) : (
             <span className="text-muted-foreground">{loading ? "Loading..." : placeholder}</span>
           )}
@@ -89,7 +99,9 @@ export function LookupDropdown<T extends LookupItem>({
                       setOpen(false);
                     }}
                   >
-                    <Check className={cn("size-4", selectedId === null ? "opacity-100" : "opacity-0")} />
+                    {showSelectionIndicator ? (
+                      <Check className={cn("size-4", selectedId === null ? "opacity-100" : "opacity-0")} />
+                    ) : null}
                     <span>{clearLabel}</span>
                   </CommandItem>
                 ) : null}
@@ -102,8 +114,10 @@ export function LookupDropdown<T extends LookupItem>({
                       setOpen(false);
                     }}
                   >
-                    <Check className={cn("size-4", selectedId === item.id ? "opacity-100" : "opacity-0")} />
-                    <span>{getItemLabel(item)}</span>
+                    {showSelectionIndicator ? (
+                      <Check className={cn("size-4", selectedId === item.id ? "opacity-100" : "opacity-0")} />
+                    ) : null}
+                    {renderItem ? <span>{renderItem(item)}</span> : <span>{getItemLabel(item)}</span>}
                   </CommandItem>
                 ))}
               </CommandGroup>
