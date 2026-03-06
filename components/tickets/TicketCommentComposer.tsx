@@ -6,13 +6,14 @@ import Link from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
 import {
   Bold,
-  Check,
   Italic,
   Link2,
+  Reply,
   List,
   ListOrdered,
   Pilcrow,
   SendHorizonal,
+  StickyNote,
   Unlink,
 } from "lucide-react";
 
@@ -169,8 +170,8 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
               )}
               onClick={() => setIsInternal((active) => !active)}
             >
-              <Check className="h-3.5 w-3.5" />
-              Internal note
+              {isInternal ? <StickyNote className="h-3.5 w-3.5" /> : <Reply className="h-3.5 w-3.5" />}
+              {isInternal ? "Internal note" : "Public reply"}
             </Button>
             <Button
               type="button"
