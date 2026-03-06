@@ -71,8 +71,11 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     editorProps: {
       attributes: {
         class:
-          "min-h-[96px] w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus-visible:border-zinc-400 [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal",
+          "min-h-6 w-full text-sm leading-6 text-zinc-900 outline-none [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-zinc-400 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_ul]:ml-5 [&_ul]:list-disc [&_ol]:ml-5 [&_ol]:list-decimal",
       },
+    },
+    parseOptions: {
+      preserveWhitespace: "full",
     },
     onUpdate: ({ editor: currentEditor }) => {
       setIsEmpty(currentEditor.getText().trim().length === 0);
@@ -144,54 +147,61 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
-      <div className="mb-2 flex items-center gap-2">
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="outline"
-          className="h-8 w-8"
-          aria-label="Toggle formatting controls"
-          onClick={() => setIsFormatOpen((open) => !open)}
-        >
-          T
-        </Button>
-        {isFormatOpen ? (
-          <div className="flex items-center gap-0 overflow-hidden rounded-md border border-zinc-200 bg-white">
-            <FormatButton isActive={editor?.isActive("bold") ?? false} onClick={() => editor?.chain().focus().toggleBold().run()}>
-              <Bold className="h-4 w-4" />
-            </FormatButton>
-            <FormatButton
-              isActive={editor?.isActive("italic") ?? false}
-              onClick={() => editor?.chain().focus().toggleItalic().run()}
-            >
-              <Italic className="h-4 w-4" />
-            </FormatButton>
-            <FormatButton
-              isActive={editor?.isActive("bulletList") ?? false}
-              onClick={() => editor?.chain().focus().toggleBulletList().run()}
-            >
-              <List className="h-4 w-4" />
-            </FormatButton>
-            <FormatButton
-              isActive={editor?.isActive("orderedList") ?? false}
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-            >
-              <ListOrdered className="h-4 w-4" />
-            </FormatButton>
-            <FormatButton isActive={editor?.isActive("link") ?? false} onClick={handleSetOrUnsetLink}>
-              {editor?.isActive("link") ? <Unlink className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
-            </FormatButton>
-          </div>
-        ) : null}
+    <div className="rounded-xl border border-zinc-200 bg-white px-3 pb-3 pt-2 shadow-sm">
+      <div className="max-h-64 overflow-y-auto px-1 pb-2">
+        <EditorContent editor={editor} />
       </div>
 
-      <EditorContent editor={editor} />
+      <div className="mt-2 flex items-end justify-between gap-3 border-t border-zinc-100 pt-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="outline"
+              className="h-8 w-8"
+              aria-label="Toggle formatting controls"
+              onClick={() => setIsFormatOpen((open) => !open)}
+            >
+              T
+            </Button>
+            {isFormatOpen ? (
+              <div className="flex items-center gap-0 overflow-hidden rounded-md border border-zinc-200 bg-white">
+                <FormatButton
+                  isActive={editor?.isActive("bold") ?? false}
+                  onClick={() => editor?.chain().focus().toggleBold().run()}
+                >
+                  <Bold className="h-4 w-4" />
+                </FormatButton>
+                <FormatButton
+                  isActive={editor?.isActive("italic") ?? false}
+                  onClick={() => editor?.chain().focus().toggleItalic().run()}
+                >
+                  <Italic className="h-4 w-4" />
+                </FormatButton>
+                <FormatButton
+                  isActive={editor?.isActive("bulletList") ?? false}
+                  onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                >
+                  <List className="h-4 w-4" />
+                </FormatButton>
+                <FormatButton
+                  isActive={editor?.isActive("orderedList") ?? false}
+                  onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </FormatButton>
+                <FormatButton isActive={editor?.isActive("link") ?? false} onClick={handleSetOrUnsetLink}>
+                  {editor?.isActive("link") ? <Unlink className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                </FormatButton>
+              </div>
+            ) : null}
+          </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div>
-          {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
-          {feedbackMessage ? <p className="text-sm text-green-600">{feedbackMessage}</p> : null}
+          <div>
+            {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+            {feedbackMessage ? <p className="text-sm text-green-600">{feedbackMessage}</p> : null}
+          </div>
         </div>
         <Button
           type="button"
