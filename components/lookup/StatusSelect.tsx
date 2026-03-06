@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,15 @@ const STATUS_DOT_CLASS: Record<TicketStatusRow["color"], string> = {
   blue: "bg-blue-600",
   purple: "bg-purple-600",
   zinc: "bg-zinc-600",
+};
+
+const STATUS_CHECK_CLASS: Record<TicketStatusRow["color"], string> = {
+  green: "text-green-600",
+  amber: "text-amber-600",
+  red: "text-red-600",
+  blue: "text-blue-600",
+  purple: "text-purple-600",
+  zinc: "text-zinc-600",
 };
 
 type StatusSelectProps = {
@@ -108,17 +118,24 @@ export function StatusSelect({ value, onChange }: StatusSelectProps) {
           onSelect={onChange}
           getItemLabel={(status) => status.label}
           renderSelected={(status) => (
-            <span className="inline-flex items-center gap-2">
+            <span className="flex w-full items-center justify-start gap-2 text-left">
               <span className={cn("h-2 w-2 rounded-full", STATUS_DOT_CLASS[status.color])} aria-hidden="true" />
               <span className="truncate">{status.label}</span>
             </span>
           )}
           renderItem={(status) => (
             <span className="inline-flex items-center gap-2">
-              <span className={cn("h-2 w-2 rounded-full", STATUS_DOT_CLASS[status.color])} aria-hidden="true" />
+              <span className="inline-flex h-4 w-4 items-center justify-center" aria-hidden="true">
+                {value === status.id ? (
+                  <Check className={cn("h-4 w-4", STATUS_CHECK_CLASS[status.color])} />
+                ) : (
+                  <span className={cn("h-2 w-2 rounded-full", STATUS_DOT_CLASS[status.color])} />
+                )}
+              </span>
               <span>{status.label}</span>
             </span>
           )}
+          showSelectionIndicator={false}
           placeholder="Select status"
           searchable={false}
           emptyText="No statuses found"
