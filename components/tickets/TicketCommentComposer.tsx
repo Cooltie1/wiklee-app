@@ -36,7 +36,7 @@ function FormatButton({
       type="button"
       size="icon-sm"
       variant={isActive ? "secondary" : "ghost"}
-      className={cn("h-8 w-8 rounded-none", isActive ? "bg-zinc-200 text-zinc-900" : "")}
+      className={cn("h-7 w-7 rounded-md", isActive ? "bg-zinc-200 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100")}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >
@@ -147,26 +147,26 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white px-3 pb-3 pt-2 shadow-sm">
-      <div className="max-h-64 overflow-y-auto px-1 pb-2">
+    <div className="rounded-xl border border-zinc-200 bg-white px-2 py-1.5 shadow-sm">
+      <div className="max-h-64 overflow-y-auto px-0.5 pb-1">
         <EditorContent editor={editor} />
       </div>
 
-      <div className="mt-2 flex items-end justify-between gap-3 border-t border-zinc-100 pt-2">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1">
             <Button
               type="button"
               size="icon-sm"
-              variant="outline"
-              className="h-8 w-8"
+              variant="ghost"
+              className="h-7 w-7 rounded-md text-zinc-600 hover:bg-zinc-100"
               aria-label="Toggle formatting controls"
               onClick={() => setIsFormatOpen((open) => !open)}
             >
               T
             </Button>
             {isFormatOpen ? (
-              <div className="flex items-center gap-0 overflow-hidden rounded-md border border-zinc-200 bg-white">
+              <div className="flex items-center gap-0 rounded-md">
                 <FormatButton
                   isActive={editor?.isActive("bold") ?? false}
                   onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -199,13 +199,15 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
           </div>
 
           <div>
-            {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
-            {feedbackMessage ? <p className="text-sm text-green-600">{feedbackMessage}</p> : null}
+            {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}
+            {feedbackMessage ? <p className="text-xs text-green-600">{feedbackMessage}</p> : null}
           </div>
         </div>
         <Button
           type="button"
           size="icon-sm"
+          variant="ghost"
+          className="h-7 w-7 rounded-md text-zinc-700 hover:bg-zinc-100"
           onClick={handleSubmit}
           disabled={isSaving || isEmpty || !editor}
           aria-label={isSaving ? "Posting comment" : "Post comment"}
