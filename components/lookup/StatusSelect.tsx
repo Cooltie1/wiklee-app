@@ -4,13 +4,25 @@ import { useEffect, useState } from "react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Label } from "@/components/ui/label";
+import type { TicketStatusRow } from "@/lib/useModal";
 import { supabase } from "@/lib/supabaseClient";
+import { cn } from "@/lib/utils";
 
 type Status = {
   id: string;
   label: string;
+  color: TicketStatusRow["color"];
   sort_order: number | null;
   created_at: string;
+};
+
+const STATUS_DOT_CLASS: Record<TicketStatusRow["color"], string> = {
+  green: "bg-green-600",
+  amber: "bg-amber-600",
+  red: "bg-red-600",
+  blue: "bg-blue-600",
+  purple: "bg-purple-600",
+  zinc: "bg-zinc-600",
 };
 
 type StatusSelectProps = {
@@ -58,7 +70,7 @@ export function StatusSelect({ value, onChange }: StatusSelectProps) {
 
       const { data, error } = await supabase
         .from("ticket_statuses")
-        .select("id, label, sort_order, created_at")
+        .select("id, label, color, sort_order, created_at")
         .or(`org_id.eq.${profile.org_id},org_id.is.null`)
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
@@ -95,6 +107,18 @@ export function StatusSelect({ value, onChange }: StatusSelectProps) {
           selectedId={value}
           onSelect={onChange}
           getItemLabel={(status) => status.label}
+          renderSelected={(status) => (
+            <span className="inline-flex items-center gap-2">
+              <span className={cn("h-2 w-2 rounded-full", STATUS_DOT_CLASS[status.color])} aria-hidden="true" />
+              <span className="truncate">{status.label}</span>
+            </span>
+          )}
+          renderItem={(status) => (
+            <span className="inline-flex items-center gap-2">
+              <span className={cn("h-2 w-2 rounded-full", STATUS_DOT_CLASS[status.color])} aria-hidden="true" />
+              <span>{status.label}</span>
+            </span>
+          )}
           placeholder="Select status"
           searchable={false}
           emptyText="No statuses found"
