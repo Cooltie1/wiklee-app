@@ -147,7 +147,12 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white px-2 py-1.5 shadow-sm">
+    <div
+      className={cn(
+        "rounded-xl border bg-white px-2 py-1.5 shadow-sm",
+        isInternal ? "border-2 border-dashed border-zinc-400" : "border border-solid border-zinc-200",
+      )}
+    >
       <div className="max-h-64 overflow-y-auto px-0.5 pb-1">
         <EditorContent editor={editor} />
       </div>
