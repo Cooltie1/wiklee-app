@@ -18,6 +18,7 @@ type TicketCommentThreadItem = {
   authorId: string;
   body: object | null;
   createdAt: string;
+  isInternal: boolean;
 };
 
 type TicketCommentThreadProps = {
@@ -51,7 +52,7 @@ function formatTime(timestamp: string) {
   }).format(parsed);
 }
 
-function TicketCommentBody({ content }: { content: object | null }) {
+function TicketCommentBody({ content, isRequester }: { content: object | null; isRequester: boolean }) {
   const editor = useEditor({
     immediatelyRender: false,
     editable: false,
@@ -70,8 +71,9 @@ function TicketCommentBody({ content }: { content: object | null }) {
     content: content ?? "",
     editorProps: {
       attributes: {
-        class:
-          "text-sm leading-6 text-zinc-900 outline-none [&_a]:text-blue-600 [&_a]:underline [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:break-words [&_ul]:ml-5 [&_ul]:list-disc",
+        class: `text-sm leading-6 outline-none [&_a]:underline [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:break-words [&_ul]:ml-5 [&_ul]:list-disc ${
+          isRequester ? "text-green-950 [&_a]:text-green-800" : "text-zinc-900 [&_a]:text-zinc-700"
+        }`,
       },
     },
   });
@@ -125,10 +127,12 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
 
                 <div
                   className={`rounded-2xl px-4 py-2.5 ${
-                    isRequester ? "bg-zinc-100 text-zinc-900" : "bg-zinc-900 text-white [&_a]:text-blue-200"
+                    isRequester ? "bg-green-100 text-green-950" : "bg-zinc-100 text-zinc-900"
+                  } ${
+                    comment.isInternal ? "border-2 border-dashed border-zinc-400" : "border border-solid border-transparent"
                   }`}
                 >
-                  <TicketCommentBody content={comment.body} />
+                  <TicketCommentBody content={comment.body} isRequester={isRequester} />
                 </div>
               </div>
             </div>

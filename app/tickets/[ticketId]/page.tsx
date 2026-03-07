@@ -57,7 +57,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
   async function loadComments() {
     const { data, error } = await supabase
       .from("ticket_comments")
-      .select("id, author_id, body, created_at")
+      .select("id, author_id, body, created_at, is_internal")
       .eq("ticket_id", ticket.id)
       .order("created_at", { ascending: true });
 
@@ -73,6 +73,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         authorId: comment.author_id,
         body: typeof comment.body === "object" ? comment.body : null,
         createdAt: comment.created_at,
+        isInternal: comment.is_internal ?? false,
       }))
     );
   }
