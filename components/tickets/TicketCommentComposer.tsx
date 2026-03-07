@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 type TicketCommentComposerProps = {
   ticketId: string;
+  onCommentPosted?: () => void;
 };
 
 function FormatButton({
@@ -49,7 +50,7 @@ function FormatButton({
   );
 }
 
-export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) {
+export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketCommentComposerProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isFormatOpen, setIsFormatOpen] = useState(false);
@@ -127,6 +128,7 @@ export function TicketCommentComposer({ ticketId }: TicketCommentComposerProps) 
     editor.commands.clearContent(true);
     setIsInternal(false);
     toast.success("Comment posted.");
+    onCommentPosted?.();
     setIsSaving(false);
   }
 

@@ -16,6 +16,11 @@ import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
 import { TicketCommentComposer } from "@/components/tickets/TicketCommentComposer";
+import {
+  TicketCommentThread,
+  type TicketCommentThreadItem,
+  type TicketCommentThreadUser,
+} from "@/components/tickets/TicketCommentThread";
 
 type TicketRow = {
   id: string;
@@ -42,9 +47,42 @@ type TicketDetailContentProps = {
   currentUserId: string | null;
   requesterUsers: ComboboxUser[];
   ownerUsers: ComboboxUser[];
+  usersById: Record<string, TicketCommentThreadUser>;
 };
 
-function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers }: TicketDetailContentProps) {
+function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers, usersById }: TicketDetailContentProps) {
+  const [comments, setComments] = useState<TicketCommentThreadItem[]>([]);
+  const [commentsError, setCommentsError] = useState("");
+
+  async function loadComments() {
+    const { data, error } = await supabase
+      .from("ticket_comments")
+      .select("id, author_id, body, created_at, is_internal")
+      .eq("ticket_id", ticket.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setCommentsError("We couldn't load comments right now.");
+      return;
+    }
+
+    setCommentsError("");
+    setComments(
+      (data ?? []).map((comment) => ({
+        id: comment.id,
+        authorId: comment.author_id,
+        body: typeof comment.body === "object" ? comment.body : null,
+        createdAt: comment.created_at,
+        isInternal: comment.is_internal ?? false,
+      }))
+    );
+  }
+
+  useEffect(() => {
+    void loadComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id]);
+
   const requesterAutosave = useFieldAutosave<string | null>({
     initialValue: ticket.requester_id,
     onSave: async (nextValue) => {
@@ -176,12 +214,11 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
         <div className="min-h-0 flex-1 overflow-auto px-6">
           <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
-            <div className="mt-8 flex min-h-[280px] items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-500">
-              No updates yet.
-            </div>
+            {commentsError ? <p className="mt-8 text-sm text-red-600">{commentsError}</p> : null}
+            <TicketCommentThread comments={comments} usersById={usersById} requesterId={ticket.requester_id} />
 
             <div className="sticky bottom-0 mt-auto bg-white pb-4 pt-4">
-              <TicketCommentComposer ticketId={ticket.id} />
+              <TicketCommentComposer ticketId={ticket.id} onCommentPosted={() => void loadComments()} />
             </div>
           </div>
         </div>
@@ -197,6 +234,7 @@ export default function TicketDetailPage() {
   const [ticket, setTicket] = useState<TicketRow | null>(null);
   const [requesterUsers, setRequesterUsers] = useState<ComboboxUser[]>([]);
   const [ownerUsers, setOwnerUsers] = useState<ComboboxUser[]>([]);
+  const [usersById, setUsersById] = useState<Record<string, TicketCommentThreadUser>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -253,6 +291,20 @@ export default function TicketDetailPage() {
 
       if (!isMounted) return;
 
+      setUsersById(
+        usersWithAvatars.reduce<Record<string, TicketCommentThreadUser>>((acc, user) => {
+          const fullUser = {
+            id: user.id,
+            firstName: user.first_name ?? "",
+            lastName: user.last_name ?? "",
+            avatarUrl: user.avatarUrl,
+          };
+
+          acc[user.id] = fullUser;
+          return acc;
+        }, {})
+      );
+
       setRequesterUsers(
         usersWithAvatars.map((user) => ({
           id: user.id,
@@ -297,6 +349,7 @@ export default function TicketDetailPage() {
             currentUserId={currentUserId}
             requesterUsers={requesterUsers}
             ownerUsers={ownerUsers}
+            usersById={usersById}
           />
         )}
       </section>
