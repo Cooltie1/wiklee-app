@@ -6,9 +6,15 @@ type UseFieldAutosaveOptions<T> = {
   initialValue: T;
   onSave: (nextValue: T) => Promise<void>;
   debounceMs?: number;
+  revertOnError?: boolean;
 };
 
-export function useFieldAutosave<T>({ initialValue, onSave, debounceMs = 400 }: UseFieldAutosaveOptions<T>) {
+export function useFieldAutosave<T>({
+  initialValue,
+  onSave,
+  debounceMs = 400,
+  revertOnError = true,
+}: UseFieldAutosaveOptions<T>) {
   const [currentValue, setCurrentValue] = useState<T>(initialValue);
   const [lastSavedValue, setLastSavedValue] = useState<T>(initialValue);
   const [status, setStatus] = useState<SaveStatus>("idle");
@@ -78,13 +84,15 @@ export function useFieldAutosave<T>({ initialValue, onSave, debounceMs = 400 }: 
             return;
           }
 
-          setCurrentValue(lastSavedRef.current);
+          if (revertOnError) {
+            setCurrentValue(lastSavedRef.current);
+          }
           setStatus("error");
           setErrorMessage(error instanceof Error ? error.message : "Unable to save changes.");
         }
       }, debounceMs);
     },
-    [debounceMs, onSave]
+    [debounceMs, onSave, revertOnError]
   );
 
   return {
