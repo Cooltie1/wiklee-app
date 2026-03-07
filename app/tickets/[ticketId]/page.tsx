@@ -221,7 +221,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
               titleAutosave.setValue(nextTitle);
               setTitleValidationError(nextTitle.trim() ? "" : "Title is required.");
             }}
-            className={`mt-2 h-auto w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-2 py-1 text-[2.125rem] font-semibold leading-tight shadow-none transition-colors focus-visible:ring-0 ${
+            className={`mt-2 h-auto w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-2 py-1 text-[2.125rem] md:text-[2.125rem] font-semibold leading-tight shadow-none transition-colors focus-visible:ring-0 ${
               isTitleBlank
                 ? "border-red-400 bg-red-50/30 hover:border-red-500 focus-visible:border-red-500"
                 : "border-transparent hover:border-zinc-300 focus-visible:border-zinc-400"
