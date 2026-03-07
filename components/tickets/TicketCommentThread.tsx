@@ -109,9 +109,18 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
               </Avatar>
 
               <div className={isRequester ? "text-left" : "text-right"}>
-                <div className="mb-1 flex items-center gap-2 text-sm">
-                  <p className="font-semibold text-zinc-900">{fullName}</p>
-                  <p className="text-xs text-zinc-500">{formatTime(comment.createdAt)}</p>
+                <div className={`mb-1 flex items-center gap-2 text-sm ${isRequester ? "justify-start" : "justify-end"}`}>
+                  {isRequester ? (
+                    <>
+                      <p className="font-semibold text-zinc-900">{fullName}</p>
+                      <p className="text-xs text-zinc-500">{formatTime(comment.createdAt)}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-zinc-500">{formatTime(comment.createdAt)}</p>
+                      <p className="font-semibold text-zinc-900">{fullName}</p>
+                    </>
+                  )}
                 </div>
 
                 <div
