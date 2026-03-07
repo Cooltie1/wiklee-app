@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabaseClient";
 import type { TicketPriorityRow } from "@/lib/useModal";
 
@@ -14,19 +15,27 @@ type CreatePriorityModalProps = {
   onClose: () => void;
   priorityId?: string;
   defaultLabel?: string;
+  defaultDescription?: string;
   onCreated?: (priority: TicketPriorityRow) => void;
   onUpdated?: (priority: TicketPriorityRow) => void;
 };
+
+function normalizeOptional(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+}
 
 export function CreatePriorityModal({
   open,
   onClose,
   priorityId,
   defaultLabel,
+  defaultDescription,
   onCreated,
   onUpdated,
 }: CreatePriorityModalProps) {
   const [label, setLabel] = useState(defaultLabel ?? "");
+  const [description, setDescription] = useState(defaultDescription ?? "");
   const [labelError, setLabelError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,10 +71,16 @@ export function CreatePriorityModal({
 
     const priorityPayload = {
       label: trimmedLabel,
+      description: normalizeOptional(description),
     };
 
     const request = isEditing
-      ? supabase.from("ticket_priorities").update(priorityPayload).eq("id", priorityId).select("id, label, sort_order, is_active, created_at").single()
+      ? supabase
+          .from("ticket_priorities")
+          .update(priorityPayload)
+          .eq("id", priorityId)
+          .select("id, label, description, sort_order, is_active, created_at")
+          .single()
       : supabase
           .from("ticket_priorities")
           .insert({
@@ -73,7 +88,7 @@ export function CreatePriorityModal({
             sort_order: 0,
             is_active: true,
           })
-          .select("id, label, sort_order, is_active, created_at")
+          .select("id, label, description, sort_order, is_active, created_at")
           .single();
 
     const { data: savedPriority, error: saveError } = await request;
@@ -100,6 +115,7 @@ export function CreatePriorityModal({
     }
 
     setLabel(defaultLabel ?? "");
+    setDescription(defaultDescription ?? "");
     setSubmitError("");
     onClose();
   };
@@ -110,7 +126,7 @@ export function CreatePriorityModal({
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Priority" : "Create Priority"}</DialogTitle>
           <DialogDescription>
-            {isEditing ? "Update the priority label used to sort ticket urgency." : "Create a priority to sort ticket urgency."}
+            {isEditing ? "Update the priority details used to sort ticket urgency." : "Create a priority to sort ticket urgency."}
           </DialogDescription>
         </DialogHeader>
 
@@ -121,6 +137,16 @@ export function CreatePriorityModal({
             <Label htmlFor="priority-label">Label</Label>
             <Input id="priority-label" value={label} onChange={(event) => setLabel(event.target.value)} />
             {labelError ? <p className="text-xs text-red-600">{labelError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="priority-description">Description</Label>
+            <Textarea
+              id="priority-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Optional"
+            />
           </div>
 
           <DialogFooter>

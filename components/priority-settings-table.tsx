@@ -13,6 +13,7 @@ import { useModal, type TicketPriorityRow } from "@/lib/useModal";
 type TicketPriority = {
   id: string;
   label: string;
+  description: string | null;
   sort_order: number | null;
   is_active: boolean;
 };
@@ -49,7 +50,7 @@ export function PrioritySettingsTable() {
       setLoading(true);
       setErrorMessage("");
 
-      const { data, error } = await supabase.from("ticket_priorities").select("id, label, sort_order, is_active");
+      const { data, error } = await supabase.from("ticket_priorities").select("id, label, description, sort_order, is_active");
 
       if (error) {
         if (isMounted) {
@@ -93,6 +94,7 @@ export function PrioritySettingsTable() {
         {
           id: priority.id,
           label: priority.label,
+          description: priority.description,
           sort_order: priority.sort_order,
           is_active: priority.is_active,
         },
@@ -108,6 +110,7 @@ export function PrioritySettingsTable() {
             ? {
                 ...existingPriority,
                 label: priority.label,
+                description: priority.description,
                 sort_order: priority.sort_order,
                 is_active: priority.is_active,
               }
@@ -292,8 +295,8 @@ export function PrioritySettingsTable() {
               <thead>
                 <tr className="border-b text-muted-foreground">
                   <th className="w-16 py-3 font-medium">Order</th>
-                  <th className="w-48 py-3 font-medium">ID</th>
                   <th className="py-3 font-medium">Label</th>
+                  <th className="py-3 font-medium">Description</th>
                   <th className="w-16 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
@@ -323,8 +326,8 @@ export function PrioritySettingsTable() {
                         {index + 1}
                       </div>
                     </td>
-                    <td className="py-4 font-mono text-xs text-muted-foreground">{priority.id}</td>
                     <td className="py-4 font-medium">{priority.label}</td>
+                    <td className="py-4 text-sm text-muted-foreground">{priority.description ?? "—"}</td>
                     <td className="py-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -338,6 +341,7 @@ export function PrioritySettingsTable() {
                               openModal("createPriority", {
                                 priorityId: priority.id,
                                 defaultLabel: priority.label,
+                                defaultDescription: priority.description ?? "",
                                 onUpdated: handlePriorityUpdated,
                               });
                             }}

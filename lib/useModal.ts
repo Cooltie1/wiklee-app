@@ -26,6 +26,7 @@ export type TicketStatusRow = {
 export type TicketPriorityRow = {
   id: string;
   label: string;
+  description: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -70,6 +71,7 @@ export type ModalRegistry = {
   createPriority: {
     priorityId?: string;
     defaultLabel?: string;
+    defaultDescription?: string;
     onCreated?: (priority: TicketPriorityRow) => void;
     onUpdated?: (priority: TicketPriorityRow) => void;
   };
