@@ -53,6 +53,7 @@ type TicketDetailContentProps = {
 function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers, usersById }: TicketDetailContentProps) {
   const [comments, setComments] = useState<TicketCommentThreadItem[]>([]);
   const [commentsError, setCommentsError] = useState("");
+  const [titleValidationError, setTitleValidationError] = useState("");
 
   async function loadComments() {
     const { data, error } = await supabase
@@ -125,8 +126,15 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
   const titleAutosave = useFieldAutosave<string>({
     initialValue: ticket.title,
+    revertOnError: false,
     onSave: async (nextValue) => {
-      const { error } = await supabase.from("tickets").update({ title: nextValue }).eq("id", ticket.id);
+      const trimmedTitle = nextValue.trim();
+
+      if (!trimmedTitle) {
+        throw new Error("Title is required.");
+      }
+
+      const { error } = await supabase.from("tickets").update({ title: trimmedTitle }).eq("id", ticket.id);
       if (error) throw new Error(error.message);
     },
   });
@@ -154,6 +162,8 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
     priorityAutosave.errorMessage ||
     statusAutosave.errorMessage ||
     titleAutosave.errorMessage;
+
+  const isTitleBlank = titleAutosave.currentValue.trim().length === 0;
 
   const sidebarStatus = useMemo(() => {
     if (isAnySaving) return "Saving...";
@@ -191,7 +201,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
       </aside>
 
       <div className="flex h-full min-h-0 flex-col bg-white">
-        <div className="border-b border-zinc-100 px-6 pb-6 pt-6">
+        <div className="border-b border-zinc-100 px-6 pb-3 pt-4">
           <nav className="text-sm text-zinc-500" aria-label="Breadcrumb">
             <ol className="flex items-center gap-2">
               <li>
@@ -206,10 +216,20 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
           <Input
             value={titleAutosave.currentValue}
-            onChange={(event) => titleAutosave.setValue(event.target.value)}
-            className="mt-4 h-auto w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-transparent px-2 py-1 text-2xl font-semibold shadow-none hover:border-zinc-300 focus-visible:border-zinc-400 focus-visible:ring-0"
+            onChange={(event) => {
+              const nextTitle = event.target.value;
+              titleAutosave.setValue(nextTitle);
+              setTitleValidationError(nextTitle.trim() ? "" : "Title is required.");
+            }}
+            className={`mt-2 h-auto w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-2 py-1 text-[2.125rem] font-semibold leading-tight shadow-none transition-colors focus-visible:ring-0 ${
+              isTitleBlank
+                ? "border-red-400 bg-red-50/30 hover:border-red-500 focus-visible:border-red-500"
+                : "border-transparent hover:border-zinc-300 focus-visible:border-zinc-400"
+            }`}
             aria-label="Ticket title"
+            aria-invalid={isTitleBlank}
           />
+          {titleValidationError ? <p className="mt-1 text-sm text-red-600">{titleValidationError}</p> : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-6">
