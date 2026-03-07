@@ -69,6 +69,26 @@ export function CreatePriorityModal({
 
     setIsSubmitting(true);
 
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !authData.user) {
+      setSubmitError("Unable to determine current user");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", authData.user.id)
+      .single();
+
+    if (profileError || !profile?.org_id) {
+      setSubmitError("Unable to determine your organization");
+      setIsSubmitting(false);
+      return;
+    }
+
     const priorityPayload = {
       label: trimmedLabel,
       description: normalizeOptional(description),
@@ -79,12 +99,14 @@ export function CreatePriorityModal({
           .from("ticket_priorities")
           .update(priorityPayload)
           .eq("id", priorityId)
+          .eq("org_id", profile.org_id)
           .select("id, label, description, sort_order, is_active, created_at")
           .single()
       : supabase
           .from("ticket_priorities")
           .insert({
             ...priorityPayload,
+            org_id: profile.org_id,
             sort_order: 0,
             is_active: true,
           })

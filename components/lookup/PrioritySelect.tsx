@@ -30,9 +30,37 @@ export function PrioritySelect({ value, onChange }: PrioritySelectProps) {
       setIsLoading(true);
       setErrorMessage("");
 
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !authData.user) {
+        if (isMounted) {
+          setErrorMessage("Unable to determine current user");
+          setPriorities([]);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileError || !profile?.org_id) {
+        if (isMounted) {
+          setErrorMessage("Unable to determine your organization");
+          setPriorities([]);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       const { data, error } = await supabase
         .from("ticket_priorities")
         .select("id, label, sort_order, created_at")
+        .eq("org_id", profile.org_id)
+        .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
 

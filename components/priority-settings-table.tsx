@@ -42,6 +42,7 @@ export function PrioritySettingsTable() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +51,34 @@ export function PrioritySettingsTable() {
       setLoading(true);
       setErrorMessage("");
 
-      const { data, error } = await supabase.from("ticket_priorities").select("id, label, description, sort_order, is_active");
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !authData.user) {
+        if (isMounted) {
+          setErrorMessage("Unable to determine current user");
+          setLoading(false);
+        }
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileError || !profile?.org_id) {
+        if (isMounted) {
+          setErrorMessage("Unable to determine your organization");
+          setLoading(false);
+        }
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("ticket_priorities")
+        .select("id, label, description, sort_order, is_active")
+        .eq("org_id", profile.org_id);
 
       if (error) {
         if (isMounted) {
@@ -61,6 +89,7 @@ export function PrioritySettingsTable() {
       }
 
       if (isMounted) {
+        setOrgId(profile.org_id);
         setPriorities(orderPriorities((data ?? []) as TicketPriority[]));
         setLoading(false);
       }
@@ -143,7 +172,17 @@ export function PrioritySettingsTable() {
     setStatusUpdatingId(priorityId);
     setErrorMessage("");
 
-    const { error } = await supabase.from("ticket_priorities").update({ is_active: true }).eq("id", priorityId);
+    if (!orgId) {
+      setErrorMessage("Unable to determine your organization");
+      setStatusUpdatingId(null);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("ticket_priorities")
+      .update({ is_active: true })
+      .eq("id", priorityId)
+      .eq("org_id", orgId);
 
     if (error) {
       setErrorMessage(error.message || "Unable to activate priority");
@@ -167,6 +206,11 @@ export function PrioritySettingsTable() {
   };
 
   const persistOrder = async (orderedVisiblePriorities: TicketPriority[]) => {
+    if (!orgId) {
+      setErrorMessage("Unable to determine your organization");
+      return;
+    }
+
     setSavingOrder(true);
 
     const updates = orderedVisiblePriorities.map((priority, index) =>
@@ -174,6 +218,7 @@ export function PrioritySettingsTable() {
         .from("ticket_priorities")
         .update({ sort_order: index + 1 })
         .eq("id", priority.id)
+        .eq("org_id", orgId)
     );
 
     const results = await Promise.all(updates);
