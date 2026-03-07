@@ -6,6 +6,9 @@ import { DeleteCategoryModal } from "@/components/modals/DeleteCategoryModal";
 import { CreateStatusModal } from "@/components/modals/CreateStatusModal";
 import { DeactivateStatusModal } from "@/components/modals/DeactivateStatusModal";
 import { DeleteStatusModal } from "@/components/modals/DeleteStatusModal";
+import { CreatePriorityModal } from "@/components/modals/CreatePriorityModal";
+import { DeactivatePriorityModal } from "@/components/modals/DeactivatePriorityModal";
+import { DeletePriorityModal } from "@/components/modals/DeletePriorityModal";
 import type { ActiveModal } from "@/lib/useModal";
 
 type ModalRendererProps = {
@@ -31,6 +34,12 @@ export function ModalRenderer({ activeModal, onClose }: ModalRendererProps) {
       return <DeactivateStatusModal open onClose={onClose} {...activeModal.props} />;
     case "deleteStatus":
       return <DeleteStatusModal open onClose={onClose} {...activeModal.props} />;
+    case "createPriority":
+      return <CreatePriorityModal open onClose={onClose} {...activeModal.props} />;
+    case "deactivatePriority":
+      return <DeactivatePriorityModal open onClose={onClose} {...activeModal.props} />;
+    case "deletePriority":
+      return <DeletePriorityModal open onClose={onClose} {...activeModal.props} />;
     default:
       return null;
   }
