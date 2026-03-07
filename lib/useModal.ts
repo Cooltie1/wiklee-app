@@ -23,6 +23,14 @@ export type TicketStatusRow = {
   created_at: string;
 };
 
+export type TicketPriorityRow = {
+  id: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type ModalRegistry = {
   createCategory: {
     categoryId?: string;
@@ -58,6 +66,22 @@ export type ModalRegistry = {
     statusId: string;
     statusLabel: string;
     onDeleted?: (statusId: string) => void;
+  };
+  createPriority: {
+    priorityId?: string;
+    defaultLabel?: string;
+    onCreated?: (priority: TicketPriorityRow) => void;
+    onUpdated?: (priority: TicketPriorityRow) => void;
+  };
+  deactivatePriority: {
+    priorityId: string;
+    priorityLabel: string;
+    onDeactivated?: (priorityId: string) => void;
+  };
+  deletePriority: {
+    priorityId: string;
+    priorityLabel: string;
+    onDeleted?: (priorityId: string) => void;
   };
 };
 

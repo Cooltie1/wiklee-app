@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CategorySettingsTable } from "@/components/category-settings-table";
+import { PrioritySettingsTable } from "@/components/priority-settings-table";
 import { StatusSettingsTable } from "@/components/status-settings-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -35,6 +36,10 @@ export default async function SystemFieldPage({ params }: { params: Promise<{ fi
 
   if (!fieldConfig) {
     notFound();
+  }
+
+  if (field === "priority") {
+    return <PrioritySettingsTable />;
   }
 
   if (field === "category") {
