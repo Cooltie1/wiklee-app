@@ -97,7 +97,7 @@ export function UserCombobox({
         >
           {selectedUser ? (
             <span className="flex items-center gap-2 truncate">
-              <UserOption user={selectedUser} />
+              <UserOption key={`${selectedUser.id}-${selectedUser.avatarUrl ?? "fallback"}`} user={selectedUser} />
             </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
