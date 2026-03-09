@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       invited_to_org: true,
       has_set_password: false,
     },
-    emailRedirectTo,
+    redirectTo: emailRedirectTo,
   });
 
   if (inviteError) {
