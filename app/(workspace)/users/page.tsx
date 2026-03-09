@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -10,6 +11,7 @@ type ProfileRow = {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  avatar_path: string | null;
   role: string | null;
   updated_at: string | null;
 };
@@ -110,7 +112,7 @@ export default function UsersPage() {
 
       const { data: profileRows, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, email, role, updated_at")
+        .select("id, first_name, last_name, email, avatar_path, role, updated_at")
         .eq("org_id", currentProfile.org_id)
         .order("first_name", { ascending: true });
 
@@ -216,7 +218,17 @@ export default function UsersPage() {
             <tbody>
               {filteredProfiles.map((profile) => (
                 <tr key={profile.id} className="border-b border-zinc-100 last:border-b-0">
-                  <td className="py-4 font-medium">{getDisplayName(profile)}</td>
+                  <td className="py-4 font-medium">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar
+                        userId={profile.id}
+                        name={getDisplayName(profile)}
+                        avatarPath={profile.avatar_path}
+                        className="size-8"
+                      />
+                      <span>{getDisplayName(profile)}</span>
+                    </div>
+                  </td>
                   <td className="py-4">{getDisplayRole(profile.role)}</td>
                   <td className="py-4">{profile.email ?? "—"}</td>
                   <td className="py-4">{getRelativeUpdated(profile.updated_at)}</td>
