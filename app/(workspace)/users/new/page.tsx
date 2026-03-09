@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,17 +78,20 @@ export default function NewUserPage() {
 
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
-          <select
-            id="role"
-            name="role"
-            value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
-            className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-            required
-          >
-            <option value="agent">Agent</option>
-            <option value="user">User</option>
-          </select>
+          <div className="relative">
+            <select
+              id="role"
+              name="role"
+              value={role}
+              onChange={(event) => setRole(event.target.value as UserRole)}
+              className="dark:bg-input/30 border-input h-9 w-full appearance-none rounded-md border bg-transparent px-3 py-1 pr-8 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              required
+            >
+              <option value="agent">Agent</option>
+              <option value="user">User</option>
+            </select>
+            <ChevronDown className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2" />
+          </div>
         </div>
 
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
