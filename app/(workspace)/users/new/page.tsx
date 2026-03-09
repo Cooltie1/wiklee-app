@@ -22,14 +22,32 @@ export default function NewUserPage() {
     setSuccessMessage("");
     setIsSaving(true);
 
-    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: { role },
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.access_token) {
+      setIsSaving(false);
+      setErrorMessage("You must be signed in to invite users.");
+      return;
+    }
+
+    const response = await fetch("/api/users/invite", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ email, role }),
     });
+
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
 
     setIsSaving(false);
 
-    if (error) {
-      setErrorMessage(error.message ?? "Unable to send invite.");
+    if (!response.ok) {
+      setErrorMessage(result.error ?? "Unable to send invite.");
       return;
     }
 
