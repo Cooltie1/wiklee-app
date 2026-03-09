@@ -28,6 +28,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requiresOrgSetup, setRequiresOrgSetup] = useState(true);
 
   // Skip onboarding ONLY if:
   // - profile.first_name is set
@@ -43,6 +44,14 @@ export default function OnboardingPage() {
     if (!userData.user) {
       console.log("❌ No user found, redirecting to login");
       router.replace("/login");
+      return;
+    }
+
+    const isInvitedUser = userData.user.user_metadata?.invited_to_org === true;
+    const hasSetPassword = userData.user.user_metadata?.has_set_password === true;
+
+    if (isInvitedUser && !hasSetPassword) {
+      router.replace("/set-password");
       return;
     }
 
@@ -96,7 +105,9 @@ export default function OnboardingPage() {
     console.log("🧠 raw first_name:", profile?.first_name);
     console.log("🧠 raw orgName:", orgName);
 
-    if (hasFirstName && hasOrgName && hasOrgSlug) {
+    const shouldRequireOrgSetup = !isInvitedUser && (!hasOrgName || !hasOrgSlug);
+
+    if (hasFirstName && !shouldRequireOrgSetup) {
       console.log("✅ Skipping onboarding → redirecting home");
       router.replace("/");
       return;
@@ -110,8 +121,9 @@ export default function OnboardingPage() {
     setCompanyName(orgName);
     setWorkspaceUrl(orgSlug);
     setUserId(userData.user.id);
+    setRequiresOrgSetup(shouldRequireOrgSetup);
 
-    setStep(hasFirstName ? 2 : 1);
+    setStep(hasFirstName && shouldRequireOrgSetup ? 2 : 1);
 
     setChecking(false);
   })();
@@ -161,16 +173,18 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (!trimmedCompanyName) {
-      setLoading(false);
-      setError("Please enter a company name.");
-      return;
-    }
+    if (requiresOrgSetup) {
+      if (!trimmedCompanyName) {
+        setLoading(false);
+        setError("Please enter a company name.");
+        return;
+      }
 
-    if (!trimmedWorkspaceUrl) {
-      setLoading(false);
-      setError("Please enter a workspace URL.");
-      return;
+      if (!trimmedWorkspaceUrl) {
+        setLoading(false);
+        setError("Please enter a workspace URL.");
+        return;
+      }
     }
 
     // Fetch org_id (org should exist already)
@@ -186,16 +200,18 @@ export default function OnboardingPage() {
       return;
     }
 
-    // 1) Update org name (no insert)
-    const { error: orgErr } = await supabase
-      .from("orgs")
-      .update({ name: trimmedCompanyName, slug: trimmedWorkspaceUrl })
-      .eq("id", profile.org_id);
+    if (requiresOrgSetup) {
+      // 1) Update org name (no insert)
+      const { error: orgErr } = await supabase
+        .from("orgs")
+        .update({ name: trimmedCompanyName, slug: trimmedWorkspaceUrl })
+        .eq("id", profile.org_id);
 
-    if (orgErr) {
-      setLoading(false);
-      setError(orgErr.message);
-      return;
+      if (orgErr) {
+        setLoading(false);
+        setError(orgErr.message);
+        return;
+      }
     }
 
     // 2) Update profile personal info
@@ -227,7 +243,7 @@ export default function OnboardingPage() {
         <CardHeader>
           <CardTitle>{step === 1 ? "Tell us about you" : "Create your company"}</CardTitle>
           <CardDescription>
-            Step {step} of 2: {step === 1 ? "Personal info" : "Company info"}
+            Step {step} of {requiresOrgSetup ? 2 : 1}: {step === 1 ? "Personal info" : "Company info"}
           </CardDescription>
         </CardHeader>
 
@@ -272,9 +288,15 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              <Button className="w-full" onClick={goToCompanyStep}>
-                Continue
-              </Button>
+              {requiresOrgSetup ? (
+                <Button className="w-full" onClick={goToCompanyStep}>
+                  Continue
+                </Button>
+              ) : (
+                <Button className="w-full" onClick={saveOnboarding} disabled={loading}>
+                  {loading ? "Saving..." : "Finish setup"}
+                </Button>
+              )}
             </>
           ) : (
             <>
