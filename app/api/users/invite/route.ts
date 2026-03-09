@@ -48,12 +48,16 @@ export async function POST(request: NextRequest) {
 
   const { data: profile, error: profileError } = await authClient
     .from("profiles")
-    .select("role")
+    .select("role, org_id")
     .eq("id", currentUser.id)
     .single();
 
   if (profileError || profile?.role !== "agent") {
     return NextResponse.json({ error: "Only agents can invite users." }, { status: 403 });
+  }
+
+  if (!profile.org_id) {
+    return NextResponse.json({ error: "Your profile is not attached to an organization." }, { status: 400 });
   }
 
   let body: InviteBody;
@@ -74,7 +78,11 @@ export async function POST(request: NextRequest) {
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: { role },
+    data: {
+      role,
+      org_id: profile.org_id,
+      invited_to_org: true,
+    },
   });
 
   if (inviteError) {

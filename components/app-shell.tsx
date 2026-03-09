@@ -104,6 +104,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const isInvitedUser = user.user_metadata?.invited_to_org === true;
+
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("org_id, first_name, last_name, avatar_path")
@@ -132,7 +134,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         hasOrgSlug = !!org?.slug?.trim();
       }
 
-      if (!hasFirstName || !hasOrgName || !hasOrgSlug) {
+      if (!hasFirstName || (!isInvitedUser && (!hasOrgName || !hasOrgSlug))) {
         router.replace("/onboarding");
         return;
       }
