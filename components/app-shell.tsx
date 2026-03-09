@@ -105,6 +105,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
 
       const isInvitedUser = user.user_metadata?.invited_to_org === true;
+      const hasSetPassword = user.user_metadata?.has_set_password === true;
+
+      if (isInvitedUser && !hasSetPassword) {
+        router.replace("/set-password");
+        return;
+      }
 
       const { data: profile, error } = await supabase
         .from("profiles")

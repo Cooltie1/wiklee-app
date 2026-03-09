@@ -48,6 +48,12 @@ export default function OnboardingPage() {
     }
 
     const isInvitedUser = userData.user.user_metadata?.invited_to_org === true;
+    const hasSetPassword = userData.user.user_metadata?.has_set_password === true;
+
+    if (isInvitedUser && !hasSetPassword) {
+      router.replace("/set-password");
+      return;
+    }
 
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")

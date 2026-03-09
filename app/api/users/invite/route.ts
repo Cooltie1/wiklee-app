@@ -77,12 +77,18 @@ export async function POST(request: NextRequest) {
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL;
+
+  const emailRedirectTo = appUrl ? `${appUrl.replace(/\/$/, "")}/set-password` : undefined;
+
   const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
     data: {
       role,
       org_id: profile.org_id,
       invited_to_org: true,
+      has_set_password: false,
     },
+    emailRedirectTo,
   });
 
   if (inviteError) {
