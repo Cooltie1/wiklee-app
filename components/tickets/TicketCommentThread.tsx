@@ -5,6 +5,7 @@ import Link from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatTicketDetailDateTime } from "@/lib/utils";
 
 type TicketCommentThreadUser = {
   id: string;
@@ -46,19 +47,6 @@ function getInitials(name: string) {
   if (!parts.length) return "?";
 
   return parts.map((part) => part.charAt(0).toUpperCase()).join("");
-}
-
-function formatTime(timestamp: string) {
-  const parsed = new Date(timestamp);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
 }
 
 function TicketCommentBody({ content }: { content: object | null }) {
@@ -123,11 +111,11 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
                   {isRequester ? (
                     <>
                       <p className="font-semibold text-zinc-900">{fullName}</p>
-                      <p className="text-xs text-zinc-500">{formatTime(comment.createdAt)}</p>
+                      <p className="text-xs text-zinc-500">{formatTicketDetailDateTime(comment.createdAt)}</p>
                     </>
                   ) : (
                     <>
-                      <p className="text-xs text-zinc-500">{formatTime(comment.createdAt)}</p>
+                      <p className="text-xs text-zinc-500">{formatTicketDetailDateTime(comment.createdAt)}</p>
                       <p className="font-semibold text-zinc-900">{fullName}</p>
                     </>
                   )}

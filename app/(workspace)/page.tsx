@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { StatusLabel } from "@/components/status-label";
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabase } from "@/lib/supabaseClient";
+import { formatRelativeDateTime } from "@/lib/utils";
 import { TicketStatusRow } from "@/lib/useModal";
 
 type TicketRow = {
@@ -55,14 +56,6 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
-    []
-  );
 
   useEffect(() => {
     async function loadWorkspaceData() {
@@ -261,7 +254,7 @@ export default function TicketsPage() {
                         "—"
                       )}
                     </td>
-                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{dateFormatter.format(new Date(ticket.created_at))}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{formatRelativeDateTime(ticket.created_at)}</td>
                   </tr>
                 );
               })}
