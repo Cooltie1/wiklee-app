@@ -104,7 +104,9 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
           createdAt: event.created_at,
           isInternal: false,
           entryType: "event",
-          eventMessage: `${fieldLabel} changed from ${oldValue} -> ${newValue}`,
+          eventFieldLabel: fieldLabel,
+          eventOldValue: oldValue,
+          eventNewValue: newValue,
         };
       })
     );
