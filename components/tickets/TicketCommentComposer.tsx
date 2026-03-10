@@ -29,10 +29,12 @@ type TicketCommentComposerProps = {
 
 function FormatButton({
   isActive,
+  isInternal,
   onClick,
   children,
 }: {
   isActive: boolean;
+  isInternal: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -41,7 +43,16 @@ function FormatButton({
       type="button"
       size="icon-sm"
       variant={isActive ? "secondary" : "ghost"}
-      className={cn("h-7 w-7 rounded-md", isActive ? "bg-zinc-200 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100")}
+      className={cn(
+        "h-7 w-7 rounded-md",
+        isInternal
+          ? isActive
+            ? "bg-amber-200 text-amber-900 hover:bg-amber-200"
+            : "text-amber-700 hover:bg-amber-100"
+          : isActive
+            ? "bg-zinc-200 text-zinc-900"
+            : "text-zinc-600 hover:bg-zinc-100",
+      )}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >
@@ -181,7 +192,13 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
               variant={isFormatOpen ? "secondary" : "ghost"}
               className={cn(
                 "h-7 w-7 rounded-md",
-                isFormatOpen ? "bg-zinc-200 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100",
+                isInternal
+                  ? isFormatOpen
+                    ? "bg-amber-200 text-amber-900 hover:bg-amber-200"
+                    : "text-amber-700 hover:bg-amber-100"
+                  : isFormatOpen
+                    ? "bg-zinc-200 text-zinc-900"
+                    : "text-zinc-600 hover:bg-zinc-100",
               )}
               aria-label="Toggle formatting controls"
               onClick={() => setIsFormatOpen((open) => !open)}
@@ -192,29 +209,37 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
               <div className="flex items-center gap-0 rounded-md">
                 <FormatButton
                   isActive={editor?.isActive("bold") ?? false}
+                  isInternal={isInternal}
                   onClick={() => editor?.chain().focus().toggleBold().run()}
                 >
                   <Bold className="h-4 w-4" />
                 </FormatButton>
                 <FormatButton
                   isActive={editor?.isActive("italic") ?? false}
+                  isInternal={isInternal}
                   onClick={() => editor?.chain().focus().toggleItalic().run()}
                 >
                   <Italic className="h-4 w-4" />
                 </FormatButton>
                 <FormatButton
                   isActive={editor?.isActive("bulletList") ?? false}
+                  isInternal={isInternal}
                   onClick={() => editor?.chain().focus().toggleBulletList().run()}
                 >
                   <List className="h-4 w-4" />
                 </FormatButton>
                 <FormatButton
                   isActive={editor?.isActive("orderedList") ?? false}
+                  isInternal={isInternal}
                   onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                 >
                   <ListOrdered className="h-4 w-4" />
                 </FormatButton>
-                <FormatButton isActive={editor?.isActive("link") ?? false} onClick={handleSetOrUnsetLink}>
+                <FormatButton
+                  isActive={editor?.isActive("link") ?? false}
+                  isInternal={isInternal}
+                  onClick={handleSetOrUnsetLink}
+                >
                   {editor?.isActive("link") ? <Unlink className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
                 </FormatButton>
               </div>
@@ -226,7 +251,10 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
           type="button"
           size="icon-sm"
           variant="ghost"
-          className="h-7 w-7 rounded-md text-zinc-700 hover:bg-zinc-100"
+          className={cn(
+            "h-7 w-7 rounded-md",
+            isInternal ? "text-amber-700 hover:bg-amber-100" : "text-zinc-700 hover:bg-zinc-100",
+          )}
           onClick={handleSubmit}
           disabled={isSaving || isEmpty || !editor}
           aria-label={isSaving ? "Posting comment" : "Post comment"}
