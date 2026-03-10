@@ -17,8 +17,37 @@ const monthDayYearFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const shortMonthDayTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const longMonthDayYearTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+function isOlderThanMonths(date: Date, now: Date, months: number) {
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return date < cutoff;
+}
+
+function isSameCalendarDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
 }
 
 export function formatRelativeDateTime(dateInput: string | Date, nowInput: Date = new Date()) {
@@ -35,7 +64,6 @@ export function formatRelativeDateTime(dateInput: string | Date, nowInput: Date 
   const hourMs = 60 * minuteMs;
   const dayMs = 24 * hourMs;
   const weekMs = 7 * dayMs;
-  const yearMs = 365 * dayMs;
 
   if (diffMs < hourMs) {
     const minutes = Math.max(1, Math.floor(diffMs / minuteMs));
@@ -56,9 +84,36 @@ export function formatRelativeDateTime(dateInput: string | Date, nowInput: Date 
     return `${days} Days Ago`;
   }
 
-  if (diffMs < yearMs) {
+  if (!isOlderThanMonths(date, now, 11)) {
     return monthDayFormatter.format(date);
   }
 
   return monthDayYearFormatter.format(date);
+}
+
+export function formatTicketDetailDateTime(dateInput: string | Date, nowInput: Date = new Date()) {
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const now = nowInput instanceof Date ? nowInput : new Date(nowInput);
+
+  if (isSameCalendarDay(date, now)) {
+    return `Today, ${twelveHourTimeFormatter.format(date)} (Today)`;
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (isSameCalendarDay(date, yesterday)) {
+    return `Yesterday, ${twelveHourTimeFormatter.format(date)} (yesterday)`;
+  }
+
+  if (!isOlderThanMonths(date, now, 11)) {
+    return shortMonthDayTimeFormatter.format(date);
+  }
+
+  return longMonthDayYearTimeFormatter.format(date);
 }
