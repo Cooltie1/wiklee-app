@@ -23,6 +23,11 @@ type TicketCommentThreadItem = {
   eventFieldLabel?: string;
   eventOldValue?: string;
   eventNewValue?: string;
+  eventChanges?: Array<{
+    fieldLabel: string;
+    oldValue: string;
+    newValue: string;
+  }>;
 };
 
 type TicketCommentThreadProps = {
@@ -141,10 +146,23 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
                 >
                   <div className="text-left">
                     {comment.entryType === "event" ? (
-                      <p className="text-sm leading-6">
-                        {comment.eventFieldLabel ?? "Field"} changed from <span className="font-semibold">{comment.eventOldValue ?? "Empty"}</span>{" "}
-                        → <span className="font-semibold">{comment.eventNewValue ?? "Empty"}</span>
-                      </p>
+                      <div className="space-y-1 text-sm leading-6">
+                        {(comment.eventChanges?.length
+                          ? comment.eventChanges
+                          : [
+                              {
+                                fieldLabel: comment.eventFieldLabel ?? "Field",
+                                oldValue: comment.eventOldValue ?? "Empty",
+                                newValue: comment.eventNewValue ?? "Empty",
+                              },
+                            ]
+                        ).map((change) => (
+                          <p key={`${change.fieldLabel}-${change.oldValue}-${change.newValue}`}>
+                            {change.fieldLabel} changed from <span className="font-semibold">{change.oldValue}</span> →{" "}
+                            <span className="font-semibold">{change.newValue}</span>
+                          </p>
+                        ))}
+                      </div>
                     ) : (
                       <TicketCommentBody content={comment.body} />
                     )}
