@@ -1,14 +1,19 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { ChevronDown } from "lucide-react";
 
+import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 
 type UserRole = "agent" | "user";
+
+const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
+  { id: "agent", label: "Agent" },
+  { id: "user", label: "User" },
+];
 
 export default function NewUserPage() {
   const [email, setEmail] = useState("");
@@ -78,19 +83,20 @@ export default function NewUserPage() {
 
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
-          <div className="relative">
-            <select
-              id="role"
-              name="role"
-              value={role}
-              onChange={(event) => setRole(event.target.value as UserRole)}
-              className="dark:bg-input/30 border-input h-9 w-full appearance-none rounded-md border bg-transparent px-3 py-1 pr-8 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-              required
-            >
-              <option value="agent">Agent</option>
-              <option value="user">User</option>
-            </select>
-            <ChevronDown className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2" />
+          <div id="role">
+            <LookupDropdown
+              items={ROLE_OPTIONS}
+              selectedId={role}
+              onSelect={(selectedRole) => {
+                if (selectedRole) {
+                  setRole(selectedRole);
+                }
+              }}
+              getItemLabel={(roleOption) => roleOption.label}
+              placeholder="Select role"
+              searchable={false}
+              emptyText="No roles found"
+            />
           </div>
         </div>
 
