@@ -15,6 +15,7 @@ type TicketRow = {
   ticket_number: number;
   title: string;
   created_at: string;
+  updated_at: string;
   requester_id: string | null;
   owner_id: string | null;
   ticket_statuses: { label: string; color: TicketStatusRow["color"] } | { label: string; color: TicketStatusRow["color"] }[] | null;
@@ -49,7 +50,7 @@ export default function TicketsPage() {
   const router = useRouter();
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, ProfileRow>>({});
-  const [sortKey, setSortKey] = useState<"ticket_number" | "title" | "status" | "category" | "requester" | "owner" | "created_at">(
+  const [sortKey, setSortKey] = useState<"ticket_number" | "title" | "status" | "category" | "requester" | "owner" | "created_at" | "updated_at">(
     "created_at"
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -64,7 +65,7 @@ export default function TicketsPage() {
 
       const { data: ticketData, error: ticketError } = await supabase
         .from("tickets")
-        .select("id, ticket_number, title, created_at, requester_id, owner_id, ticket_statuses(label, color), ticket_categories(name)")
+        .select("id, ticket_number, title, created_at, updated_at, requester_id, owner_id, ticket_statuses(label, color), ticket_categories(name)")
         .order("created_at", { ascending: false });
 
       if (ticketError) {
@@ -135,6 +136,8 @@ export default function TicketsPage() {
           return getProfileName(owner);
         case "created_at":
           return new Date(ticket.created_at).getTime();
+        case "updated_at":
+          return new Date(ticket.updated_at).getTime();
       }
     };
 
@@ -189,6 +192,7 @@ export default function TicketsPage() {
                 <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("requester")}>Requester{getSortIndicator("requester")}</button></th>
                 <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("owner")}>Owner{getSortIndicator("owner")}</button></th>
                 <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("created_at")}>Created At{getSortIndicator("created_at")}</button></th>
+                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("updated_at")}>Updated At{getSortIndicator("updated_at")}</button></th>
               </tr>
             </thead>
             <tbody>
@@ -255,6 +259,7 @@ export default function TicketsPage() {
                       )}
                     </td>
                     <td className="max-w-0 truncate py-4 whitespace-nowrap">{formatRelativeDateTime(ticket.created_at)}</td>
+                    <td className="max-w-0 truncate py-4 whitespace-nowrap">{formatRelativeDateTime(ticket.updated_at)}</td>
                   </tr>
                 );
               })}
