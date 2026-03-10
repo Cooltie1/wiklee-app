@@ -135,8 +135,8 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
                       : comment.isInternal
                         ? "bg-amber-50 text-amber-900"
                       : isRequester
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "bg-white text-zinc-900"
+                        ? "bg-slate-50 text-zinc-900"
+                        : "bg-slate-50 text-zinc-900"
                   }`}
                 >
                   <div className="text-left">
