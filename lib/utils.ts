@@ -101,14 +101,14 @@ export function formatTicketDetailDateTime(dateInput: string | Date, nowInput: D
   const now = nowInput instanceof Date ? nowInput : new Date(nowInput);
 
   if (isSameCalendarDay(date, now)) {
-    return `Today, ${twelveHourTimeFormatter.format(date)} (Today)`;
+    return `Today ${twelveHourTimeFormatter.format(date)}`;
   }
 
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
 
   if (isSameCalendarDay(date, yesterday)) {
-    return `Yesterday, ${twelveHourTimeFormatter.format(date)} (yesterday)`;
+    return `Yesterday ${twelveHourTimeFormatter.format(date)}`;
   }
 
   if (!isOlderThanMonths(date, now, 11)) {
