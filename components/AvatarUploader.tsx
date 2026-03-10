@@ -444,7 +444,6 @@ export function AvatarUploader({
                 className="pointer-events-none absolute inset-0"
                 style={{ background: "radial-gradient(circle at center, transparent 67%, rgba(0, 0, 0, 0.45) 68%)" }}
               />
-              <div className="pointer-events-none absolute inset-4 rounded-full border-2 border-white/90" />
             </div>
 
             <label className="block space-y-2 text-sm">
@@ -474,7 +473,7 @@ export function AvatarUploader({
               Cancel
             </Button>
             <Button type="button" onClick={onConfirmCrop} disabled={!pendingFile || isUploading}>
-              Save crop
+              Save Image
             </Button>
           </DialogFooter>
         </DialogContent>
