@@ -19,6 +19,10 @@ type TicketCommentThreadItem = {
   body: object | null;
   createdAt: string;
   isInternal: boolean;
+  entryType?: "comment" | "event";
+  eventFieldLabel?: string;
+  eventOldValue?: string;
+  eventNewValue?: string;
 };
 
 type TicketCommentThreadProps = {
@@ -126,13 +130,22 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
 
                 <div
                   className={`rounded-2xl px-4 py-2.5 ${
-                    isRequester ? "bg-zinc-100 text-zinc-900" : "border border-zinc-300 bg-white text-zinc-900"
-                  } ${
-                    comment.isInternal ? "border-2 border-dashed border-zinc-400" : ""
-                  }`}
+                    comment.entryType === "event"
+                      ? "bg-amber-50 text-amber-900"
+                      : isRequester
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "border border-zinc-300 bg-white text-zinc-900"
+                  } ${comment.isInternal ? "border-2 border-dashed border-zinc-400" : ""}`}
                 >
                   <div className="text-left">
-                    <TicketCommentBody content={comment.body} />
+                    {comment.entryType === "event" ? (
+                      <p className="text-sm leading-6">
+                        {comment.eventFieldLabel ?? "Field"} changed from <span className="font-semibold">{comment.eventOldValue ?? "Empty"}</span>{" "}
+                        → <span className="font-semibold">{comment.eventNewValue ?? "Empty"}</span>
+                      </p>
+                    ) : (
+                      <TicketCommentBody content={comment.body} />
+                    )}
                   </div>
                 </div>
               </div>
