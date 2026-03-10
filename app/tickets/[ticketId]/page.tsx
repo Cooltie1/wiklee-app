@@ -27,6 +27,8 @@ type TicketRow = {
   ticket_number: number;
   title: string;
   description: string | null;
+  created_at: string;
+  created_by: string | null;
   requester_id: string | null;
   owner_id: string | null;
   category_id: string | null;
@@ -172,6 +174,44 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
     return "";
   }, [autosaveError, isAnySaved, isAnySaving]);
 
+  const ticketDescriptionComment = useMemo<TicketCommentThreadItem | null>(() => {
+    const description = ticket.description?.trim();
+
+    if (!description || !ticket.created_by) {
+      return null;
+    }
+
+    const paragraphs = description
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => ({
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: line,
+          },
+        ],
+      }));
+
+    return {
+      id: `${ticket.id}-description`,
+      authorId: ticket.created_by,
+      body: {
+        type: "doc",
+        content: paragraphs.length ? paragraphs : [{ type: "paragraph" }],
+      },
+      createdAt: ticket.created_at,
+      isInternal: false,
+    };
+  }, [ticket.created_at, ticket.created_by, ticket.description, ticket.id]);
+
+  const threadComments = useMemo(
+    () => (ticketDescriptionComment ? [ticketDescriptionComment, ...comments] : comments),
+    [comments, ticketDescriptionComment]
+  );
+
   return (
     <div className="grid h-full min-h-0 grid-cols-[240px_1fr] overflow-hidden bg-white">
       <aside className="h-full border-r border-zinc-200 bg-white p-6">
@@ -235,7 +275,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         <div className="min-h-0 flex-1 overflow-auto px-6">
           <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
             {commentsError ? <p className="mt-8 text-sm text-red-600">{commentsError}</p> : null}
-            <TicketCommentThread comments={comments} usersById={usersById} requesterId={ticket.requester_id} />
+            <TicketCommentThread comments={threadComments} usersById={usersById} requesterId={ticket.requester_id} />
 
             <div className="sticky bottom-0 mt-auto bg-white pb-4 pt-4">
               <TicketCommentComposer ticketId={ticket.id} onCommentPosted={() => void loadComments()} />
@@ -271,7 +311,9 @@ export default function TicketDetailPage() {
           supabase.auth.getUser(),
           supabase
             .from("tickets")
-            .select("id, ticket_number, title, description, requester_id, owner_id, category_id, priority_id, status_id")
+            .select(
+              "id, ticket_number, title, description, created_at, created_by, requester_id, owner_id, category_id, priority_id, status_id"
+            )
             .eq("id", ticketId)
             .single(),
           supabase.from("profiles").select("id, first_name, last_name, avatar_path, role"),
