@@ -152,8 +152,8 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
                           : [
                               {
                                 fieldLabel: comment.eventFieldLabel ?? "Field",
-                                oldValue: comment.eventOldValue ?? "Empty",
-                                newValue: comment.eventNewValue ?? "Empty",
+                                oldValue: comment.eventOldValue ?? "None",
+                                newValue: comment.eventNewValue ?? "None",
                               },
                             ]
                         ).map((change) => (

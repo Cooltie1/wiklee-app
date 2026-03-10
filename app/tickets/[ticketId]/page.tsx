@@ -63,12 +63,13 @@ function groupTicketEvents(events: TicketEventRow[]): TicketCommentThreadItem[] 
     if (!currentGroup.length) return;
 
     const firstEvent = currentGroup[0];
+    const latestEvent = currentGroup[currentGroup.length - 1];
     const changesByField = new Map<string, { fieldLabel: string; oldValue: string; newValue: string }>();
 
     currentGroup.forEach((event) => {
       const fieldLabel = event.field_label?.trim() || "Field";
-      const oldValue = event.old_value?.trim() || "Empty";
-      const newValue = event.new_value?.trim() || "Empty";
+      const oldValue = event.old_value?.trim() || "None";
+      const newValue = event.new_value?.trim() || "None";
       const existing = changesByField.get(fieldLabel);
 
       if (!existing) {
@@ -83,13 +84,18 @@ function groupTicketEvents(events: TicketEventRow[]): TicketCommentThreadItem[] 
       existing.newValue = newValue;
     });
 
-    const eventChanges = Array.from(changesByField.values());
+    const eventChanges = Array.from(changesByField.values()).filter((change) => change.oldValue !== change.newValue);
+
+    if (!eventChanges.length) {
+      currentGroup = [];
+      return;
+    }
 
     groupedItems.push({
       id: `event-group-${firstEvent.id}`,
       authorId: firstEvent.actor_id,
       body: null,
-      createdAt: firstEvent.created_at,
+      createdAt: latestEvent.created_at,
       isInternal: false,
       entryType: "event",
       eventFieldLabel: eventChanges[0]?.fieldLabel,
@@ -152,7 +158,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         .select("id, actor_id, field_key, field_label, old_value, new_value, created_at")
         .eq("ticket_id", ticket.id)
         .eq("event_type", "field_changed")
-        .in("field_key", ["status_id", "owner_id", "priority_id", "category_id"])
+        .in("field_key", ["status_id", "owner_id", "requester_id", "priority_id", "category_id"])
         .order("created_at", { ascending: true }),
     ]);
 
