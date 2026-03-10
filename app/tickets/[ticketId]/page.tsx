@@ -55,9 +55,19 @@ type TicketEventRow = {
 
 const EVENT_GROUP_WINDOW_MS = 5 * 60 * 1000;
 
-function groupTicketEvents(events: TicketEventRow[]): TicketCommentThreadItem[] {
+function groupTicketEvents(events: TicketEventRow[], commentTimestamps: string[]): TicketCommentThreadItem[] {
   const groupedItems: TicketCommentThreadItem[] = [];
   let currentGroup: TicketEventRow[] = [];
+  const commentTimes = commentTimestamps.map((timestamp) => new Date(timestamp).getTime());
+  let commentCursor = 0;
+
+  const hasCommentBetween = (startTime: number, endTime: number) => {
+    while (commentCursor < commentTimes.length && commentTimes[commentCursor] <= startTime) {
+      commentCursor += 1;
+    }
+
+    return commentCursor < commentTimes.length && commentTimes[commentCursor] < endTime;
+  };
 
   const flushGroup = () => {
     if (!currentGroup.length) return;
@@ -114,11 +124,14 @@ function groupTicketEvents(events: TicketEventRow[]): TicketCommentThreadItem[] 
     }
 
     const firstGroupEvent = currentGroup[0];
+    const lastGroupEvent = currentGroup[currentGroup.length - 1];
     const eventTime = new Date(event.created_at).getTime();
     const firstGroupTime = new Date(firstGroupEvent.created_at).getTime();
+    const lastGroupTime = new Date(lastGroupEvent.created_at).getTime();
     const isSameActor = event.actor_id === firstGroupEvent.actor_id;
+    const commentInterruptedGroup = hasCommentBetween(lastGroupTime, eventTime);
 
-    if (isSameActor && eventTime - firstGroupTime <= EVENT_GROUP_WINDOW_MS) {
+    if (isSameActor && !commentInterruptedGroup && eventTime - firstGroupTime <= EVENT_GROUP_WINDOW_MS) {
       currentGroup.push(event);
       return;
     }
@@ -179,7 +192,12 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
       }))
     );
 
-    setEvents(groupTicketEvents((eventsResult.data ?? []) as TicketEventRow[]));
+    setEvents(
+      groupTicketEvents(
+        (eventsResult.data ?? []) as TicketEventRow[],
+        (commentsResult.data ?? []).map((comment) => comment.created_at)
+      )
+    );
   }
 
   useEffect(() => {
