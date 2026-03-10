@@ -44,6 +44,94 @@ type ProfileRow = {
   role: string | null;
 };
 
+type TicketEventRow = {
+  id: string;
+  actor_id: string;
+  field_label: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+};
+
+const EVENT_GROUP_WINDOW_MS = 5 * 60 * 1000;
+
+function groupTicketEvents(events: TicketEventRow[]): TicketCommentThreadItem[] {
+  const groupedItems: TicketCommentThreadItem[] = [];
+  let currentGroup: TicketEventRow[] = [];
+
+  const flushGroup = () => {
+    if (!currentGroup.length) return;
+
+    const firstEvent = currentGroup[0];
+    const latestEvent = currentGroup[currentGroup.length - 1];
+    const changesByField = new Map<string, { fieldLabel: string; oldValue: string; newValue: string }>();
+
+    currentGroup.forEach((event) => {
+      const fieldLabel = event.field_label?.trim() || "Field";
+      const oldValue = event.old_value?.trim() || "None";
+      const newValue = event.new_value?.trim() || "None";
+      const existing = changesByField.get(fieldLabel);
+
+      if (!existing) {
+        changesByField.set(fieldLabel, {
+          fieldLabel,
+          oldValue,
+          newValue,
+        });
+        return;
+      }
+
+      existing.newValue = newValue;
+    });
+
+    const eventChanges = Array.from(changesByField.values()).filter((change) => change.oldValue !== change.newValue);
+
+    if (!eventChanges.length) {
+      currentGroup = [];
+      return;
+    }
+
+    groupedItems.push({
+      id: `event-group-${firstEvent.id}`,
+      authorId: firstEvent.actor_id,
+      body: null,
+      createdAt: latestEvent.created_at,
+      isInternal: false,
+      entryType: "event",
+      eventFieldLabel: eventChanges[0]?.fieldLabel,
+      eventOldValue: eventChanges[0]?.oldValue,
+      eventNewValue: eventChanges[0]?.newValue,
+      eventChanges,
+    });
+
+    currentGroup = [];
+  };
+
+  events.forEach((event) => {
+    if (!currentGroup.length) {
+      currentGroup.push(event);
+      return;
+    }
+
+    const firstGroupEvent = currentGroup[0];
+    const eventTime = new Date(event.created_at).getTime();
+    const firstGroupTime = new Date(firstGroupEvent.created_at).getTime();
+    const isSameActor = event.actor_id === firstGroupEvent.actor_id;
+
+    if (isSameActor && eventTime - firstGroupTime <= EVENT_GROUP_WINDOW_MS) {
+      currentGroup.push(event);
+      return;
+    }
+
+    flushGroup();
+    currentGroup.push(event);
+  });
+
+  flushGroup();
+
+  return groupedItems;
+}
+
 type TicketDetailContentProps = {
   ticket: TicketRow;
   currentUserId: string | null;
@@ -70,7 +158,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
         .select("id, actor_id, field_key, field_label, old_value, new_value, created_at")
         .eq("ticket_id", ticket.id)
         .eq("event_type", "field_changed")
-        .in("field_key", ["status_id", "owner_id", "priority_id", "category_id"])
+        .in("field_key", ["status_id", "owner_id", "requester_id", "priority_id", "category_id"])
         .order("created_at", { ascending: true }),
     ]);
 
@@ -91,25 +179,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
       }))
     );
 
-    setEvents(
-      (eventsResult.data ?? []).map((event) => {
-        const fieldLabel = event.field_label?.trim() || "Field";
-        const oldValue = event.old_value?.trim() || "Empty";
-        const newValue = event.new_value?.trim() || "Empty";
-
-        return {
-          id: `event-${event.id}`,
-          authorId: event.actor_id,
-          body: null,
-          createdAt: event.created_at,
-          isInternal: false,
-          entryType: "event",
-          eventFieldLabel: fieldLabel,
-          eventOldValue: oldValue,
-          eventNewValue: newValue,
-        };
-      })
-    );
+    setEvents(groupTicketEvents((eventsResult.data ?? []) as TicketEventRow[]));
   }
 
   useEffect(() => {
