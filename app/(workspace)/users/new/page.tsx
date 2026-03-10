@@ -2,12 +2,22 @@
 
 import { FormEvent, useState } from "react";
 
+import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 
 type UserRole = "agent" | "user";
+
+const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
+  { id: "agent", label: "Agent" },
+  { id: "user", label: "User" },
+];
+
+function isUserRole(value: string): value is UserRole {
+  return value === "agent" || value === "user";
+}
 
 export default function NewUserPage() {
   const [email, setEmail] = useState("");
@@ -77,17 +87,21 @@ export default function NewUserPage() {
 
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
-          <select
-            id="role"
-            name="role"
-            value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
-            className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-            required
-          >
-            <option value="agent">Agent</option>
-            <option value="user">User</option>
-          </select>
+          <div id="role">
+            <LookupDropdown
+              items={ROLE_OPTIONS}
+              selectedId={role}
+              onSelect={(selectedRole) => {
+                if (selectedRole && isUserRole(selectedRole)) {
+                  setRole(selectedRole);
+                }
+              }}
+              getItemLabel={(roleOption) => roleOption.label}
+              placeholder="Select role"
+              searchable={false}
+              emptyText="No roles found"
+            />
+          </div>
         </div>
 
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
