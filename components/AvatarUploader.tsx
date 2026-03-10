@@ -473,7 +473,7 @@ export function AvatarUploader({
               Cancel
             </Button>
             <Button type="button" onClick={onConfirmCrop} disabled={!pendingFile || isUploading}>
-              Save Image
+              Save image
             </Button>
           </DialogFooter>
         </DialogContent>
