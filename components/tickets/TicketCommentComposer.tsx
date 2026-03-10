@@ -152,7 +152,7 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
     <div
       className={cn(
         "rounded-xl border bg-white px-2 py-1.5 shadow-sm",
-        isInternal ? "border-2 border-dashed border-zinc-400" : "border border-solid border-zinc-200",
+        isInternal ? "border border-amber-300 bg-amber-50" : "border border-solid border-zinc-200",
       )}
     >
       <div className="max-h-64 overflow-y-auto px-0.5 pb-1">
@@ -168,7 +168,7 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
               variant={isInternal ? "secondary" : "ghost"}
               className={cn(
                 "h-7 rounded-md px-2 text-xs",
-                isInternal ? "bg-zinc-200 text-zinc-900" : "text-zinc-600 hover:bg-zinc-100",
+                isInternal ? "bg-amber-200 text-amber-900 hover:bg-amber-200" : "text-zinc-600 hover:bg-zinc-100",
               )}
               onClick={() => setIsInternal((active) => !active)}
             >
