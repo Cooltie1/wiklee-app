@@ -54,35 +54,64 @@ type TicketDetailContentProps = {
 
 function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers, usersById }: TicketDetailContentProps) {
   const [comments, setComments] = useState<TicketCommentThreadItem[]>([]);
+  const [events, setEvents] = useState<TicketCommentThreadItem[]>([]);
   const [commentsError, setCommentsError] = useState("");
   const [titleValidationError, setTitleValidationError] = useState("");
 
-  async function loadComments() {
-    const { data, error } = await supabase
-      .from("ticket_comments")
-      .select("id, author_id, body, created_at, is_internal")
-      .eq("ticket_id", ticket.id)
-      .order("created_at", { ascending: true });
+  async function loadTimelineEntries() {
+    const [commentsResult, eventsResult] = await Promise.all([
+      supabase
+        .from("ticket_comments")
+        .select("id, author_id, body, created_at, is_internal")
+        .eq("ticket_id", ticket.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("ticket_events")
+        .select("id, actor_id, field_key, field_label, old_value, new_value, created_at")
+        .eq("ticket_id", ticket.id)
+        .eq("event_type", "field_changed")
+        .in("field_key", ["status_id", "owner_id", "priority_id", "category_id"])
+        .order("created_at", { ascending: true }),
+    ]);
 
-    if (error) {
+    if (commentsResult.error || eventsResult.error) {
       setCommentsError("We couldn't load comments right now.");
       return;
     }
 
     setCommentsError("");
     setComments(
-      (data ?? []).map((comment) => ({
+      (commentsResult.data ?? []).map((comment) => ({
         id: comment.id,
         authorId: comment.author_id,
         body: typeof comment.body === "object" ? comment.body : null,
         createdAt: comment.created_at,
         isInternal: comment.is_internal ?? false,
+        entryType: "comment",
       }))
+    );
+
+    setEvents(
+      (eventsResult.data ?? []).map((event) => {
+        const fieldLabel = event.field_label?.trim() || "Field";
+        const oldValue = event.old_value?.trim() || "Empty";
+        const newValue = event.new_value?.trim() || "Empty";
+
+        return {
+          id: `event-${event.id}`,
+          authorId: event.actor_id,
+          body: null,
+          createdAt: event.created_at,
+          isInternal: false,
+          entryType: "event",
+          eventMessage: `${fieldLabel} changed from ${oldValue} -> ${newValue}`,
+        };
+      })
     );
   }
 
   useEffect(() => {
-    void loadComments();
+    void loadTimelineEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.id]);
 
@@ -204,13 +233,19 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
       },
       createdAt: ticket.created_at,
       isInternal: false,
+      entryType: "comment",
     };
   }, [ticket.created_at, ticket.created_by, ticket.description, ticket.id]);
 
-  const threadComments = useMemo(
-    () => (ticketDescriptionComment ? [ticketDescriptionComment, ...comments] : comments),
-    [comments, ticketDescriptionComment]
-  );
+  const threadComments = useMemo(() => {
+    const baseEntries = [...comments, ...events];
+
+    if (ticketDescriptionComment) {
+      baseEntries.push(ticketDescriptionComment);
+    }
+
+    return baseEntries.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [comments, events, ticketDescriptionComment]);
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[240px_1fr] overflow-hidden bg-white">
@@ -278,7 +313,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
             <TicketCommentThread comments={threadComments} usersById={usersById} requesterId={ticket.requester_id} />
 
             <div className="sticky bottom-0 mt-auto bg-white pb-4 pt-4">
-              <TicketCommentComposer ticketId={ticket.id} onCommentPosted={() => void loadComments()} />
+              <TicketCommentComposer ticketId={ticket.id} onCommentPosted={() => void loadTimelineEntries()} />
             </div>
           </div>
         </div>
