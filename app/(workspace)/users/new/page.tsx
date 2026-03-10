@@ -15,6 +15,10 @@ const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
   { id: "user", label: "User" },
 ];
 
+function isUserRole(value: string): value is UserRole {
+  return value === "agent" || value === "user";
+}
+
 export default function NewUserPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("user");
@@ -88,7 +92,7 @@ export default function NewUserPage() {
               items={ROLE_OPTIONS}
               selectedId={role}
               onSelect={(selectedRole) => {
-                if (selectedRole) {
+                if (selectedRole && isUserRole(selectedRole)) {
                   setRole(selectedRole);
                 }
               }}
