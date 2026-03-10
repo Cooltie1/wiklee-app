@@ -47,8 +47,8 @@ function FormatButton({
         "h-7 w-7 rounded-md",
         isInternal
           ? isActive
-            ? "bg-amber-200 text-amber-900 hover:bg-amber-200"
-            : "text-amber-700 hover:bg-amber-100"
+            ? "bg-amber-200 text-amber-900 hover:bg-amber-200 hover:text-amber-900"
+            : "text-amber-700 hover:bg-amber-100 hover:text-amber-700"
           : isActive
             ? "bg-zinc-200 text-zinc-900"
             : "text-zinc-600 hover:bg-zinc-100",
@@ -179,7 +179,7 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
               variant={isInternal ? "secondary" : "ghost"}
               className={cn(
                 "h-7 rounded-md px-2 text-xs",
-                isInternal ? "bg-amber-200 text-amber-900 hover:bg-amber-200" : "text-zinc-600 hover:bg-zinc-100",
+                isInternal ? "bg-amber-200 text-amber-900 hover:bg-amber-200 hover:text-amber-900" : "text-zinc-600 hover:bg-zinc-100",
               )}
               onClick={() => setIsInternal((active) => !active)}
             >
@@ -194,8 +194,8 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
                 "h-7 w-7 rounded-md",
                 isInternal
                   ? isFormatOpen
-                    ? "bg-amber-200 text-amber-900 hover:bg-amber-200"
-                    : "text-amber-700 hover:bg-amber-100"
+                    ? "bg-amber-200 text-amber-900 hover:bg-amber-200 hover:text-amber-900"
+                    : "text-amber-700 hover:bg-amber-100 hover:text-amber-700"
                   : isFormatOpen
                     ? "bg-zinc-200 text-zinc-900"
                     : "text-zinc-600 hover:bg-zinc-100",
@@ -253,7 +253,7 @@ export function TicketCommentComposer({ ticketId, onCommentPosted }: TicketComme
           variant="ghost"
           className={cn(
             "h-7 w-7 rounded-md",
-            isInternal ? "text-amber-700 hover:bg-amber-100" : "text-zinc-700 hover:bg-zinc-100",
+            isInternal ? "text-amber-700 hover:bg-amber-100 hover:text-amber-700" : "text-zinc-700 hover:bg-zinc-100",
           )}
           onClick={handleSubmit}
           disabled={isSaving || isEmpty || !editor}
