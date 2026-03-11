@@ -16,15 +16,17 @@ import { supabase } from "@/lib/supabaseClient";
 
 type ProfileRow = {
   id: string;
+  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   avatar_path: string | null;
   role: string | null;
 };
 
-function userFromAuth(userId: string, firstName?: string | null, lastName?: string | null): ComboboxUser {
+function userFromAuth(userId: string, displayName?: string | null, firstName?: string | null, lastName?: string | null): ComboboxUser {
   return {
     id: userId,
+    display_name: displayName ?? null,
     first_name: firstName ?? null,
     last_name: lastName ?? null,
     avatarUrl: null,
@@ -78,13 +80,14 @@ export default function NewTicketPage() {
 
       const fallbackCurrentUser = userFromAuth(
         currentUser.id,
+        currentUser.user_metadata?.display_name,
         currentUser.user_metadata?.first_name,
         currentUser.user_metadata?.last_name
       );
 
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, avatar_path, role");
+        .select("id, display_name, first_name, last_name, avatar_path, role");
 
       if (!isMounted) {
         return;
@@ -115,6 +118,7 @@ export default function NewTicketPage() {
 
           return {
             id: profile.id,
+            display_name: profile.display_name,
             first_name: profile.first_name,
             last_name: profile.last_name,
             avatarUrl,
@@ -130,6 +134,7 @@ export default function NewTicketPage() {
       const requesterList = usersWithAvatars.length
         ? usersWithAvatars.map((user) => ({
             id: user.id,
+            display_name: user.display_name,
             first_name: user.first_name,
             last_name: user.last_name,
             avatarUrl: user.avatarUrl,
@@ -143,6 +148,7 @@ export default function NewTicketPage() {
         .filter((user) => user.role === "agent")
         .map((user) => ({
           id: user.id,
+          display_name: user.display_name,
           first_name: user.first_name,
           last_name: user.last_name,
           avatarUrl: user.avatarUrl,

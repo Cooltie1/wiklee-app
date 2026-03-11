@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
+import { getUserDisplayName } from "@/lib/userDisplayName";
 
 type UserRole = "agent" | "user";
 
 type UserProfile = {
   id: string;
+  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -27,9 +29,8 @@ const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
   { id: "user", label: "User" },
 ];
 
-function getFullName(profile: Pick<UserProfile, "first_name" | "last_name">) {
-  const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
-  return fullName || "Unknown User";
+function getDisplayName(profile: Pick<UserProfile, "display_name" | "first_name" | "last_name">) {
+  return getUserDisplayName(profile);
 }
 
 function UserDetailContent({ profile }: { profile: UserProfile }) {
@@ -49,6 +50,14 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
     },
   });
 
+  const displayNameAutosave = useFieldAutosave<string>({
+    initialValue: profile.display_name ?? "",
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("profiles").update({ display_name: nextValue.trim() || null }).eq("id", profile.id);
+      if (error) throw new Error(error.message);
+    },
+  });
+
   const roleAutosave = useFieldAutosave<UserRole>({
     initialValue: profile.role ?? "user",
     onSave: async (nextValue) => {
@@ -57,9 +66,10 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
     },
   });
 
-  const isAnySaving = [firstNameAutosave.status, lastNameAutosave.status, roleAutosave.status].includes("saving");
-  const isAnySaved = [firstNameAutosave.status, lastNameAutosave.status, roleAutosave.status].includes("saved");
-  const autosaveError = firstNameAutosave.errorMessage || lastNameAutosave.errorMessage || roleAutosave.errorMessage;
+  const isAnySaving = [firstNameAutosave.status, lastNameAutosave.status, displayNameAutosave.status, roleAutosave.status].includes("saving");
+  const isAnySaved = [firstNameAutosave.status, lastNameAutosave.status, displayNameAutosave.status, roleAutosave.status].includes("saved");
+  const autosaveError =
+    firstNameAutosave.errorMessage || lastNameAutosave.errorMessage || displayNameAutosave.errorMessage || roleAutosave.errorMessage;
 
   const sidebarStatus = useMemo(() => {
     if (isAnySaving) return "Saving...";
@@ -68,13 +78,14 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
     return "";
   }, [autosaveError, isAnySaved, isAnySaving]);
 
-  const fullName = useMemo(
+  const displayName = useMemo(
     () =>
-      getFullName({
+      getDisplayName({
+        display_name: displayNameAutosave.currentValue,
         first_name: firstNameAutosave.currentValue,
         last_name: lastNameAutosave.currentValue,
       }),
-    [firstNameAutosave.currentValue, lastNameAutosave.currentValue]
+    [displayNameAutosave.currentValue, firstNameAutosave.currentValue, lastNameAutosave.currentValue]
   );
 
   return (
@@ -96,6 +107,15 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
               id="last-name"
               value={lastNameAutosave.currentValue}
               onChange={(event) => lastNameAutosave.setValue(event.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="display-name">Display name</Label>
+            <Input
+              id="display-name"
+              value={displayNameAutosave.currentValue}
+              onChange={(event) => displayNameAutosave.setValue(event.target.value)}
             />
           </div>
 
@@ -140,13 +160,13 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
                 </Link>
               </li>
               <li aria-hidden="true">/</li>
-              <li className="text-zinc-900">{fullName}</li>
+              <li className="text-zinc-900">{displayName}</li>
             </ol>
           </nav>
 
           <div className="mt-4 flex items-center gap-3">
-            <UserAvatar userId={profile.id} name={fullName} avatarPath={profile.avatar_path} className="size-12" />
-            <h1 className="text-2xl font-semibold text-zinc-900">{fullName}</h1>
+            <UserAvatar userId={profile.id} name={displayName} avatarPath={profile.avatar_path} className="size-12" />
+            <h1 className="text-2xl font-semibold text-zinc-900">{displayName}</h1>
           </div>
         </div>
 
@@ -173,7 +193,7 @@ export default function UserDetailPage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, email, avatar_path, role")
+        .select("id, display_name, first_name, last_name, email, avatar_path, role")
         .eq("id", userId)
         .single();
 
