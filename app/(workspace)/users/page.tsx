@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ function getRelativeUpdated(updatedAt: string | null) {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -217,7 +219,20 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {filteredProfiles.map((profile) => (
-                <tr key={profile.id} className="border-b border-zinc-100 last:border-b-0">
+                <tr
+                  key={profile.id}
+                  className="cursor-pointer border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50"
+                  onClick={() => router.push(`/users/${profile.id}`)}
+                  tabIndex={0}
+                  role="button"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      router.push(`/users/${profile.id}`);
+                    }
+                  }}
+                  aria-label={`Open user ${getDisplayName(profile)}`}
+                >
                   <td className="py-4 font-medium">
                     <div className="flex items-center gap-3">
                       <UserAvatar
