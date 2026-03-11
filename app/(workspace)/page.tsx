@@ -182,7 +182,7 @@ export default function TicketsPage() {
         ) : tickets.length === 0 ? (
           <p className="text-sm text-zinc-500">No tickets found.</p>
         ) : (
-          <table className="min-w-[1120px] table-fixed text-left">
+          <table className="w-full min-w-[1120px] table-fixed text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-zinc-500">
                 <th className="min-w-32 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("ticket_number")}>Ticket Number{getSortIndicator("ticket_number")}</button></th>
