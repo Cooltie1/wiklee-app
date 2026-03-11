@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
+import { getUserDisplayName } from "@/lib/userDisplayName";
 
 type ProfileRow = {
   id: string;
+  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -19,9 +21,8 @@ type ProfileRow = {
 
 type FilterOption = "everyone" | "agents" | "users";
 
-function getDisplayName(profile: Pick<ProfileRow, "first_name" | "last_name">) {
-  const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
-  return fullName || "Unknown User";
+function getDisplayName(profile: Pick<ProfileRow, "display_name" | "first_name" | "last_name">) {
+  return getUserDisplayName(profile);
 }
 
 function getDisplayRole(role: string | null) {
@@ -114,9 +115,9 @@ export default function UsersPage() {
 
       const { data: profileRows, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, email, avatar_path, role, updated_at")
+        .select("id, display_name, first_name, last_name, email, avatar_path, role, updated_at")
         .eq("org_id", currentProfile.org_id)
-        .order("first_name", { ascending: true });
+        .order("display_name", { ascending: true });
 
       if (!isMounted) {
         return;

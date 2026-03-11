@@ -15,10 +15,12 @@ import {
   CommandSeparator,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { getUserDisplayName } from "@/lib/userDisplayName"
 import { cn } from "@/lib/utils"
 
 export type ComboboxUser = {
   id: string
+  display_name?: string | null
   first_name: string | null
   last_name: string | null
   avatarUrl?: string | null
@@ -42,8 +44,7 @@ type UserComboboxProps = {
 }
 
 function getDisplayName(user: ComboboxUser) {
-  const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
-  return fullName || "Unknown User"
+  return getUserDisplayName(user)
 }
 
 function getInitials(user: ComboboxUser) {

@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
 import { AVATAR_UPDATED_EVENT } from "@/components/AvatarUploader";
+import { getUserDisplayName } from "@/lib/userDisplayName";
 
 type CurrentUserProfile = {
   id: string;
@@ -114,7 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("org_id, first_name, last_name, avatar_path")
+        .select("org_id, display_name, first_name, last_name, avatar_path")
         .eq("id", user.id)
         .single();
 
@@ -145,7 +146,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const name = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user.email || "User";
+      const name = getUserDisplayName(profile, user.email || "User");
 
       setCurrentUser({
         id: user.id,

@@ -9,8 +9,7 @@ import { formatTicketDetailDateTime } from "@/lib/utils";
 
 type TicketCommentThreadUser = {
   id: string;
-  firstName: string;
-  lastName: string;
+  displayName: string;
   avatarUrl: string | null;
 };
 
@@ -94,15 +93,15 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
     <div className="mt-6 space-y-4 pb-8">
       {comments.map((comment) => {
         const user = usersById[comment.authorId];
-        const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : "Unknown user";
-        const fallback = getInitials(fullName);
+        const displayName = user?.displayName || "Unknown user";
+        const fallback = getInitials(displayName);
         const isRequester = requesterId !== null && comment.authorId === requesterId;
 
         return (
           <article key={comment.id} className={`flex w-full gap-3 ${isRequester ? "justify-start" : "justify-end"}`}>
             <div className={`flex max-w-[80%] gap-3 ${isRequester ? "flex-row" : "flex-row-reverse"}`}>
               <Avatar className="mt-0.5 h-9 w-9 border border-zinc-200">
-                {user?.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={`${fullName} avatar`} /> : null}
+                {user?.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={`${displayName} avatar`} /> : null}
                 <AvatarFallback className="bg-zinc-100 text-xs text-zinc-700">{fallback}</AvatarFallback>
               </Avatar>
 
@@ -110,13 +109,13 @@ export function TicketCommentThread({ comments, usersById, requesterId }: Ticket
                 <div className={`mb-1 flex items-center gap-2 text-sm ${isRequester ? "justify-start" : "justify-end"}`}>
                   {isRequester ? (
                     <>
-                      <p className="font-semibold text-zinc-900">{fullName}</p>
+                      <p className="font-semibold text-zinc-900">{displayName}</p>
                       <p className="text-xs text-zinc-500">{formatTicketDetailDateTime(comment.createdAt)}</p>
                     </>
                   ) : (
                     <>
                       <p className="text-xs text-zinc-500">{formatTicketDetailDateTime(comment.createdAt)}</p>
-                      <p className="font-semibold text-zinc-900">{fullName}</p>
+                      <p className="font-semibold text-zinc-900">{displayName}</p>
                     </>
                   )}
                 </div>

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
+import { getUserDisplayName } from "@/lib/userDisplayName";
 import { TicketCommentComposer } from "@/components/tickets/TicketCommentComposer";
 import {
   TicketCommentThread,
@@ -38,6 +39,7 @@ type TicketRow = {
 
 type ProfileRow = {
   id: string;
+  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   avatar_path: string | null;
@@ -441,7 +443,7 @@ export default function TicketDetailPage() {
             )
             .eq("id", ticketId)
             .single(),
-          supabase.from("profiles").select("id, first_name, last_name, avatar_path, role"),
+          supabase.from("profiles").select("id, display_name, first_name, last_name, avatar_path, role"),
         ]);
 
       if (!isMounted) return;
@@ -468,6 +470,7 @@ export default function TicketDetailPage() {
 
           return {
             id: profile.id,
+            display_name: profile.display_name,
             first_name: profile.first_name,
             last_name: profile.last_name,
             avatarUrl,
@@ -482,8 +485,7 @@ export default function TicketDetailPage() {
         usersWithAvatars.reduce<Record<string, TicketCommentThreadUser>>((acc, user) => {
           const fullUser = {
             id: user.id,
-            firstName: user.first_name ?? "",
-            lastName: user.last_name ?? "",
+            displayName: getUserDisplayName(user),
             avatarUrl: user.avatarUrl,
           };
 
@@ -495,6 +497,7 @@ export default function TicketDetailPage() {
       setRequesterUsers(
         usersWithAvatars.map((user) => ({
           id: user.id,
+          display_name: user.display_name,
           first_name: user.first_name,
           last_name: user.last_name,
           avatarUrl: user.avatarUrl,
@@ -505,6 +508,7 @@ export default function TicketDetailPage() {
           .filter((user) => user.role === "agent")
           .map((user) => ({
             id: user.id,
+            display_name: user.display_name,
             first_name: user.first_name,
             last_name: user.last_name,
             avatarUrl: user.avatarUrl,

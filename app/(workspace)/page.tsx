@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { StatusLabel } from "@/components/status-label";
 import { UserAvatar } from "@/components/UserAvatar";
 import { supabase } from "@/lib/supabaseClient";
+import { getUserDisplayName } from "@/lib/userDisplayName";
 import { formatRelativeDateTime } from "@/lib/utils";
 import { TicketStatusRow } from "@/lib/useModal";
 
@@ -24,6 +25,7 @@ type TicketRow = {
 
 type ProfileRow = {
   id: string;
+  display_name: string | null;
   first_name: string | null;
   last_name: string | null;
   avatar_path: string | null;
@@ -41,9 +43,7 @@ function getCategoryName(category: TicketRow["ticket_categories"]) {
 
 function getProfileName(profile?: ProfileRow) {
   if (!profile) return "—";
-
-  const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
-  return fullName || "Unknown User";
+  return getUserDisplayName(profile);
 }
 
 export default function TicketsPage() {
@@ -91,7 +91,7 @@ export default function TicketsPage() {
 
       const { data: profilesData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, avatar_path")
+        .select("id, display_name, first_name, last_name, avatar_path")
         .in("id", userIds);
 
       if (profileError) {
