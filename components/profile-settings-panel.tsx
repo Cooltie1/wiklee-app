@@ -13,12 +13,17 @@ type ProfileState = {
   email: string;
   firstName: string;
   lastName: string;
+  displayName: string;
+  hasCustomizedDisplayName: boolean;
   avatarPath: string | null;
 };
 
+function getFullName(firstName: string, lastName: string) {
+  return `${firstName} ${lastName}`.trim();
+}
+
 function getDisplayName(profile: ProfileState) {
-  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
-  return fullName || profile.email || "User";
+  return profile.displayName || profile.email || "User";
 }
 
 export function ProfileSettingsPanel() {
@@ -41,7 +46,7 @@ export function ProfileSettingsPanel() {
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name, last_name, avatar_path")
+        .select("first_name, last_name, display_name, avatar_path")
         .eq("id", user.id)
         .single();
 
@@ -51,11 +56,19 @@ export function ProfileSettingsPanel() {
         return;
       }
 
+      const firstName = profileData.first_name ?? "";
+      const lastName = profileData.last_name ?? "";
+      const fullName = getFullName(firstName, lastName);
+      const displayName = profileData.display_name ?? fullName;
+      const hasCustomizedDisplayName = !!displayName.trim() && displayName.trim() !== fullName;
+
       setProfile({
         id: user.id,
         email: user.email ?? "",
-        firstName: profileData.first_name ?? "",
-        lastName: profileData.last_name ?? "",
+        firstName,
+        lastName,
+        displayName,
+        hasCustomizedDisplayName,
         avatarPath: profileData.avatar_path ?? null,
       });
       setLoading(false);
@@ -75,10 +88,15 @@ export function ProfileSettingsPanel() {
 
     const trimmedFirstName = profile.firstName.trim();
     const trimmedLastName = profile.lastName.trim();
+    const trimmedDisplayName = profile.displayName.trim();
 
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ first_name: trimmedFirstName, last_name: trimmedLastName })
+      .update({
+        first_name: trimmedFirstName,
+        last_name: trimmedLastName,
+        display_name: trimmedDisplayName || null,
+      })
       .eq("id", profile.id);
 
     if (profileError) {
@@ -87,7 +105,16 @@ export function ProfileSettingsPanel() {
       return;
     }
 
-    setProfile((prev) => (prev ? { ...prev, firstName: trimmedFirstName, lastName: trimmedLastName } : prev));
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            firstName: trimmedFirstName,
+            lastName: trimmedLastName,
+            displayName: trimmedDisplayName,
+          }
+        : prev,
+    );
     setSaveMessage("Profile updated.");
     setSaving(false);
   }
@@ -125,7 +152,18 @@ export function ProfileSettingsPanel() {
             id="firstName"
             value={profile.firstName}
             onChange={(event) => {
-              setProfile((prev) => (prev ? { ...prev, firstName: event.target.value } : prev));
+              const nextFirstName = event.target.value;
+              const fullName = getFullName(nextFirstName, profile.lastName);
+
+              setProfile((prev) => {
+                if (!prev) return prev;
+
+                return {
+                  ...prev,
+                  firstName: nextFirstName,
+                  displayName: prev.hasCustomizedDisplayName ? prev.displayName : fullName,
+                };
+              });
               setSaveMessage(null);
             }}
             disabled={saving}
@@ -138,7 +176,43 @@ export function ProfileSettingsPanel() {
             id="lastName"
             value={profile.lastName}
             onChange={(event) => {
-              setProfile((prev) => (prev ? { ...prev, lastName: event.target.value } : prev));
+              const nextLastName = event.target.value;
+              const fullName = getFullName(profile.firstName, nextLastName);
+
+              setProfile((prev) => {
+                if (!prev) return prev;
+
+                return {
+                  ...prev,
+                  lastName: nextLastName,
+                  displayName: prev.hasCustomizedDisplayName ? prev.displayName : fullName,
+                };
+              });
+              setSaveMessage(null);
+            }}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="displayName">Display name</Label>
+          <Input
+            id="displayName"
+            value={profile.displayName}
+            onChange={(event) => {
+              const nextDisplayName = event.target.value;
+              const fullName = getFullName(profile.firstName, profile.lastName);
+
+              setProfile((prev) => {
+                if (!prev) return prev;
+
+                return {
+                  ...prev,
+                  displayName: nextDisplayName,
+                  hasCustomizedDisplayName:
+                    prev.hasCustomizedDisplayName || nextDisplayName.trim() !== fullName,
+                };
+              });
               setSaveMessage(null);
             }}
             disabled={saving}

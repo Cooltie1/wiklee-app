@@ -20,6 +20,8 @@ export default function OnboardingPage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [hasCustomizedDisplayName, setHasCustomizedDisplayName] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [workspaceUrl, setWorkspaceUrl] = useState("");
   const [step, setStep] = useState(1);
@@ -29,6 +31,10 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requiresOrgSetup, setRequiresOrgSetup] = useState(true);
+
+  function getFullName(nextFirstName: string, nextLastName: string) {
+    return `${nextFirstName} ${nextLastName}`.trim();
+  }
 
   // Skip onboarding ONLY if:
   // - profile.first_name is set
@@ -57,7 +63,7 @@ export default function OnboardingPage() {
 
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
-      .select("org_id, first_name, last_name, avatar_path")
+      .select("org_id, first_name, last_name, display_name, avatar_path")
       .eq("id", userData.user.id)
       .single();
 
@@ -115,8 +121,16 @@ export default function OnboardingPage() {
 
     console.log("➡️ Staying in onboarding");
 
-    setFirstName(profile?.first_name ?? "");
-    setLastName(profile?.last_name ?? "");
+    const nextFirstName = profile?.first_name ?? "";
+    const nextLastName = profile?.last_name ?? "";
+    const nextFullName = getFullName(nextFirstName, nextLastName);
+    const nextDisplayName = profile?.display_name ?? nextFullName;
+    const nextHasCustomizedDisplayName = !!nextDisplayName.trim() && nextDisplayName.trim() !== nextFullName;
+
+    setFirstName(nextFirstName);
+    setLastName(nextLastName);
+    setDisplayName(nextDisplayName);
+    setHasCustomizedDisplayName(nextHasCustomizedDisplayName);
     setAvatarPath(profile?.avatar_path ?? null);
     setCompanyName(orgName);
     setWorkspaceUrl(orgSlug);
@@ -163,6 +177,7 @@ export default function OnboardingPage() {
 
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
+    const trimmedDisplayName = displayName.trim();
     const trimmedCompanyName = companyName.trim();
     const trimmedWorkspaceUrl = sanitizeWorkspaceSlug(workspaceUrl.trim());
 
@@ -220,6 +235,7 @@ export default function OnboardingPage() {
       .update({
         first_name: trimmedFirstName,
         last_name: trimmedLastName || null,
+        display_name: trimmedDisplayName || null,
       })
       .eq("id", user.id);
 
@@ -261,7 +277,7 @@ export default function OnboardingPage() {
                   <div className="flex justify-center pb-1">
                     <AvatarUploader
                       userId={userId}
-                      name={`${firstName} ${lastName}`.trim()}
+                      name={displayName || getFullName(firstName, lastName)}
                       avatarPath={avatarPath}
                       sizeClassName="h-24 w-24"
                       onAvatarUpdated={setAvatarPath}
@@ -274,7 +290,15 @@ export default function OnboardingPage() {
                   id="firstName"
                   placeholder="Jane"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => {
+                    const nextFirstName = e.target.value;
+                    const nextFullName = getFullName(nextFirstName, lastName);
+
+                    setFirstName(nextFirstName);
+                    if (!hasCustomizedDisplayName) {
+                      setDisplayName(nextFullName);
+                    }
+                  }}
                 />
               </div>
 
@@ -284,7 +308,33 @@ export default function OnboardingPage() {
                   id="lastName"
                   placeholder="Doe"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => {
+                    const nextLastName = e.target.value;
+                    const nextFullName = getFullName(firstName, nextLastName);
+
+                    setLastName(nextLastName);
+                    if (!hasCustomizedDisplayName) {
+                      setDisplayName(nextFullName);
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display name</Label>
+                <Input
+                  id="displayName"
+                  placeholder="Jane Doe"
+                  value={displayName}
+                  onChange={(e) => {
+                    const nextDisplayName = e.target.value;
+                    const fullName = getFullName(firstName, lastName);
+
+                    setDisplayName(nextDisplayName);
+                    if (nextDisplayName.trim() !== fullName) {
+                      setHasCustomizedDisplayName(true);
+                    }
+                  }}
                 />
               </div>
 
