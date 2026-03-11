@@ -51,7 +51,7 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, ProfileRow>>({});
   const [sortKey, setSortKey] = useState<"ticket_number" | "title" | "status" | "category" | "requester" | "owner" | "created_at" | "updated_at">(
-    "created_at"
+    "updated_at"
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ export default function TicketsPage() {
       const { data: ticketData, error: ticketError } = await supabase
         .from("tickets")
         .select("id, ticket_number, title, created_at, updated_at, requester_id, owner_id, ticket_statuses(label, color), ticket_categories(name)")
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false });
 
       if (ticketError) {
         setError("Unable to load tickets.");
@@ -160,7 +160,7 @@ export default function TicketsPage() {
     }
 
     setSortKey(key);
-    setSortDirection("asc");
+    setSortDirection(key === "updated_at" ? "desc" : "asc");
   };
 
   const getSortIndicator = (key: typeof sortKey) => {
@@ -182,17 +182,17 @@ export default function TicketsPage() {
         ) : tickets.length === 0 ? (
           <p className="text-sm text-zinc-500">No tickets found.</p>
         ) : (
-          <table className="w-full table-fixed text-left">
+          <table className="w-full min-w-[1120px] table-fixed text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-zinc-500">
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("ticket_number")}>Ticket Number{getSortIndicator("ticket_number")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("title")}>Title{getSortIndicator("title")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("status")}>Status{getSortIndicator("status")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("category")}>Category{getSortIndicator("category")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("requester")}>Requester{getSortIndicator("requester")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("owner")}>Owner{getSortIndicator("owner")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("created_at")}>Created At{getSortIndicator("created_at")}</button></th>
-                <th className="py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("updated_at")}>Updated At{getSortIndicator("updated_at")}</button></th>
+                <th className="min-w-32 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("ticket_number")}>Ticket Number{getSortIndicator("ticket_number")}</button></th>
+                <th className="min-w-48 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("title")}>Title{getSortIndicator("title")}</button></th>
+                <th className="min-w-36 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("status")}>Status{getSortIndicator("status")}</button></th>
+                <th className="min-w-36 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("category")}>Category{getSortIndicator("category")}</button></th>
+                <th className="min-w-44 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("requester")}>Requester{getSortIndicator("requester")}</button></th>
+                <th className="min-w-44 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("owner")}>Owner{getSortIndicator("owner")}</button></th>
+                <th className="min-w-36 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("created_at")}>Created At{getSortIndicator("created_at")}</button></th>
+                <th className="min-w-36 py-3"><button type="button" className="cursor-pointer" onClick={() => handleSort("updated_at")}>Updated At{getSortIndicator("updated_at")}</button></th>
               </tr>
             </thead>
             <tbody>
