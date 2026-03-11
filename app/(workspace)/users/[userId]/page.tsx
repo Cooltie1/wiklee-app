@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { UserAvatar } from "@/components/UserAvatar";
+import { AvatarUploader } from "@/components/AvatarUploader";
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,8 @@ function getDisplayName(profile: Pick<UserProfile, "display_name" | "first_name"
 }
 
 function UserDetailContent({ profile }: { profile: UserProfile }) {
+  const [avatarPath, setAvatarPath] = useState(profile.avatar_path);
+
   const firstNameAutosave = useFieldAutosave<string>({
     initialValue: profile.first_name ?? "",
     onSave: async (nextValue) => {
@@ -165,7 +167,14 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
           </nav>
 
           <div className="mt-4 flex items-center gap-3">
-            <UserAvatar userId={profile.id} name={displayName} avatarPath={profile.avatar_path} className="size-12" />
+            <AvatarUploader
+              userId={profile.id}
+              name={displayName}
+              avatarPath={avatarPath}
+              sizeClassName="size-12"
+              tooltipText="Update avatar"
+              onAvatarUpdated={setAvatarPath}
+            />
             <h1 className="text-2xl font-semibold text-zinc-900">{displayName}</h1>
           </div>
         </div>
