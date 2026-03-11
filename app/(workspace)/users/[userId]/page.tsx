@@ -5,9 +5,13 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { UserAvatar } from "@/components/UserAvatar";
+import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
+import { useFieldAutosave } from "@/lib/useFieldAutosave";
+
+type UserRole = "agent" | "user";
 
 type UserProfile = {
   id: string;
@@ -15,71 +19,63 @@ type UserProfile = {
   last_name: string | null;
   email: string | null;
   avatar_path: string | null;
+  role: UserRole | null;
 };
+
+const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
+  { id: "agent", label: "Agent" },
+  { id: "user", label: "User" },
+];
 
 function getFullName(profile: Pick<UserProfile, "first_name" | "last_name">) {
   const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
   return fullName || "Unknown User";
 }
 
-export default function UserDetailPage() {
-  const params = useParams<{ userId: string }>();
-  const userId = params.userId;
+function UserDetailContent({ profile }: { profile: UserProfile }) {
+  const firstNameAutosave = useFieldAutosave<string>({
+    initialValue: profile.first_name ?? "",
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("profiles").update({ first_name: nextValue.trim() || null }).eq("id", profile.id);
+      if (error) throw new Error(error.message);
+    },
+  });
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const lastNameAutosave = useFieldAutosave<string>({
+    initialValue: profile.last_name ?? "",
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("profiles").update({ last_name: nextValue.trim() || null }).eq("id", profile.id);
+      if (error) throw new Error(error.message);
+    },
+  });
 
-  useEffect(() => {
-    let isMounted = true;
+  const roleAutosave = useFieldAutosave<UserRole>({
+    initialValue: profile.role ?? "user",
+    onSave: async (nextValue) => {
+      const { error } = await supabase.from("profiles").update({ role: nextValue }).eq("id", profile.id);
+      if (error) throw new Error(error.message);
+    },
+  });
 
-    async function loadProfile() {
-      setIsLoading(true);
-      setLoadError("");
+  const isAnySaving = [firstNameAutosave.status, lastNameAutosave.status, roleAutosave.status].includes("saving");
+  const isAnySaved = [firstNameAutosave.status, lastNameAutosave.status, roleAutosave.status].includes("saved");
+  const autosaveError = firstNameAutosave.errorMessage || lastNameAutosave.errorMessage || roleAutosave.errorMessage;
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, email, avatar_path")
-        .eq("id", userId)
-        .single();
+  const sidebarStatus = useMemo(() => {
+    if (isAnySaving) return "Saving...";
+    if (autosaveError) return "Unable to save changes";
+    if (isAnySaved) return "Saved";
+    return "";
+  }, [autosaveError, isAnySaved, isAnySaving]);
 
-      if (!isMounted) {
-        return;
-      }
-
-      if (error || !data) {
-        setProfile(null);
-        setLoadError("Unable to load user details.");
-        setIsLoading(false);
-        return;
-      }
-
-      setProfile(data as UserProfile);
-      setIsLoading(false);
-    }
-
-    void loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [userId]);
-
-  const fullName = useMemo(() => {
-    if (!profile) {
-      return "";
-    }
-
-    return getFullName(profile);
-  }, [profile]);
-
-  if (isLoading) {
-    return <p className="text-sm text-zinc-500">Loading user details...</p>;
-  }
-
-  if (loadError || !profile) {
-    return <p className="text-sm text-red-600">{loadError || "User not found."}</p>;
-  }
+  const fullName = useMemo(
+    () =>
+      getFullName({
+        first_name: firstNameAutosave.currentValue,
+        last_name: lastNameAutosave.currentValue,
+      }),
+    [firstNameAutosave.currentValue, lastNameAutosave.currentValue]
+  );
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[240px_1fr] overflow-hidden bg-white">
@@ -87,18 +83,50 @@ export default function UserDetailPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="first-name">First name</Label>
-            <Input id="first-name" value={profile.first_name ?? ""} readOnly />
+            <Input
+              id="first-name"
+              value={firstNameAutosave.currentValue}
+              onChange={(event) => firstNameAutosave.setValue(event.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="last-name">Last name</Label>
-            <Input id="last-name" value={profile.last_name ?? ""} readOnly />
+            <Input
+              id="last-name"
+              value={lastNameAutosave.currentValue}
+              onChange={(event) => lastNameAutosave.setValue(event.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="primary-email">Primary email</Label>
             <Input id="primary-email" type="email" value={profile.email ?? ""} readOnly />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <div id="role">
+              <LookupDropdown
+                items={ROLE_OPTIONS}
+                selectedId={roleAutosave.currentValue}
+                onSelect={(selectedRole) => {
+                  if (selectedRole === "agent" || selectedRole === "user") {
+                    roleAutosave.setValue(selectedRole);
+                  }
+                }}
+                getItemLabel={(roleOption) => roleOption.label}
+                placeholder="Select role"
+                searchable={false}
+                emptyText="No roles found"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-1 text-xs">
+          {sidebarStatus ? <p className="text-zinc-500">{sidebarStatus}</p> : null}
+          {autosaveError ? <p className="text-red-600">{autosaveError}</p> : null}
         </div>
       </aside>
 
@@ -126,4 +154,58 @@ export default function UserDetailPage() {
       </div>
     </div>
   );
+}
+
+export default function UserDetailPage() {
+  const params = useParams<{ userId: string }>();
+  const userId = params.userId;
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfile() {
+      setIsLoading(true);
+      setLoadError("");
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email, avatar_path, role")
+        .eq("id", userId)
+        .single();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error || !data) {
+        setProfile(null);
+        setLoadError("Unable to load user details.");
+        setIsLoading(false);
+        return;
+      }
+
+      setProfile(data as UserProfile);
+      setIsLoading(false);
+    }
+
+    void loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+
+  if (isLoading) {
+    return <p className="text-sm text-zinc-500">Loading user details...</p>;
+  }
+
+  if (loadError || !profile) {
+    return <p className="text-sm text-red-600">{loadError || "User not found."}</p>;
+  }
+
+  return <UserDetailContent profile={profile} />;
 }
