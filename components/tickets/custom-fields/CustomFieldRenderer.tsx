@@ -1,5 +1,5 @@
 import { format, parse } from "date-fns";
-import { ChevronDownIcon } from "lucide-react";
+import { CalendarIcon, ChevronDownIcon } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,10 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
               className="w-full justify-between text-left font-normal data-[empty=true]:text-muted-foreground"
               disabled={disabled}
             >
-              {selectedDate ? format(selectedDate, "PPP") : <span>{placeholder || "Pick a date"}</span>}
+              <span className="flex items-center gap-2">
+                <CalendarIcon className="size-4 opacity-60" />
+                <span>{selectedDate ? format(selectedDate, "PPP") : placeholder || "Pick a date"}</span>
+              </span>
               <ChevronDownIcon className="size-4 opacity-60" />
             </Button>
           </PopoverTrigger>
