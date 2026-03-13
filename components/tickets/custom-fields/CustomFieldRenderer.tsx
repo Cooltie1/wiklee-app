@@ -1,5 +1,13 @@
+import { format, parse } from "date-fns";
+import { CalendarIcon, ChevronDownIcon } from "lucide-react";
+
+import { LookupDropdown } from "@/components/lookup/LookupDropdown";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import {
   type CustomFieldFormValue,
@@ -17,11 +25,21 @@ type CustomFieldRendererProps = {
   readOnly?: boolean;
 };
 
+function parseDateValue(value: CustomFieldFormValue) {
+  if (typeof value !== "string" || !value) {
+    return undefined;
+  }
+
+  const parsed = parse(value, "yyyy-MM-dd", new Date());
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 export function CustomFieldRenderer({ definition, value, onChange, errorMessage, disabled, readOnly }: CustomFieldRendererProps) {
   const options = getOptionsFromConfig(definition.config);
   const requiredMark = definition.is_required ? " *" : "";
   const presentation = definition.config ?? {};
   const placeholder = typeof presentation.placeholder === "string" ? presentation.placeholder : "";
+  const selectedDate = parseDateValue(value);
 
   if (readOnly) {
     return (
@@ -40,16 +58,45 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
     <div className="space-y-2">
       <Label htmlFor={definition.id}>{`${definition.label}${requiredMark}`}</Label>
 
-      {(definition.field_type === "text" || definition.field_type === "date" || definition.field_type === "datetime") && (
+      {(definition.field_type === "text" || definition.field_type === "datetime") && (
         <Input
           id={definition.id}
-          type={definition.field_type === "date" ? "date" : definition.field_type === "datetime" ? "datetime-local" : "text"}
+          type={definition.field_type === "datetime" ? "datetime-local" : "text"}
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           required={definition.is_required}
           disabled={disabled}
         />
+      )}
+
+      {definition.field_type === "date" && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id={definition.id}
+              type="button"
+              variant="outline"
+              data-empty={!selectedDate}
+              className="w-full justify-between text-left font-normal data-[empty=true]:text-muted-foreground"
+              disabled={disabled}
+            >
+              <span className="flex items-center gap-2">
+                <CalendarIcon className="size-4 opacity-60" />
+                <span>{selectedDate ? format(selectedDate, "PPP") : placeholder || "Pick a date"}</span>
+              </span>
+              <ChevronDownIcon className="size-4 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(selectedDate) => onChange(selectedDate ? format(selectedDate, "yyyy-MM-dd") : null)}
+              defaultMonth={selectedDate}
+            />
+          </PopoverContent>
+        </Popover>
       )}
 
       {definition.field_type === "textarea" && (
@@ -81,11 +128,10 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
 
       {definition.field_type === "boolean" && (
         <label htmlFor={definition.id} className="flex items-center gap-2 text-sm text-zinc-700">
-          <input
+          <Checkbox
             id={definition.id}
-            type="checkbox"
             checked={value === true}
-            onChange={(event) => onChange(event.target.checked)}
+            onCheckedChange={(checked) => onChange(checked === true)}
             disabled={disabled}
           />
           <span>{typeof presentation.toggle_label === "string" ? presentation.toggle_label : "Enabled"}</span>
@@ -93,25 +139,20 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
       )}
 
       {definition.field_type === "select" && (
-        <select
-          id={definition.id}
-          className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
-          value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value || null)}
+        <LookupDropdown
+          items={options.map((option) => ({ id: option.value, label: option.label }))}
+          selectedId={typeof value === "string" ? value : null}
+          onSelect={onChange}
+          getItemLabel={(option) => option.label}
+          placeholder="Select an option"
+          searchable={false}
+          emptyText="No options configured"
           disabled={disabled}
-          required={definition.is_required}
-        >
-          <option value="">Select an option</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
       )}
 
       {definition.field_type === "multi_select" && (
-        <div id={definition.id} className="space-y-2 rounded-md border border-zinc-200 p-2">
+        <div id={definition.id} className="space-y-2 rounded-md border border-zinc-200 p-3">
           {options.length === 0 ? <p className="text-xs text-zinc-500">No options configured.</p> : null}
           {options.map((option) => {
             const selectedValues = Array.isArray(value) ? value : [];
@@ -119,11 +160,10 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
 
             return (
               <label key={option.value} className="flex items-center gap-2 text-sm text-zinc-700">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={isSelected}
-                  onChange={(event) => {
-                    if (event.target.checked) {
+                  onCheckedChange={(checked) => {
+                    if (checked === true) {
                       onChange([...selectedValues, option.value]);
                       return;
                     }
