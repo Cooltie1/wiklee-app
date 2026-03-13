@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabaseClient";
+import { normalizeRole } from "@/lib/roles";
 import { useModal, type TicketCategoryRow } from "@/lib/useModal";
 
 type TicketCategory = {
@@ -42,6 +43,7 @@ export function CategorySettingsTable() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [canEditSettings, setCanEditSettings] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -62,7 +64,7 @@ export function CategorySettingsTable() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("org_id")
+        .select("org_id, role")
         .eq("id", authData.user.id)
         .single();
 
@@ -88,6 +90,7 @@ export function CategorySettingsTable() {
       }
 
       if (isMounted) {
+        setCanEditSettings(normalizeRole(profile.role) === "admin");
         setCategories(orderCategories((data ?? []) as TicketCategory[]));
         setLoading(false);
       }
@@ -167,6 +170,10 @@ export function CategorySettingsTable() {
   };
 
   const handleCategoryActivated = async (categoryId: string) => {
+    if (!canEditSettings) {
+      setErrorMessage("This section is read-only for agents.");
+      return;
+    }
     setStatusUpdatingId(categoryId);
     setErrorMessage("");
 
@@ -194,6 +201,10 @@ export function CategorySettingsTable() {
   };
 
   const persistOrder = async (orderedVisibleCategories: TicketCategory[]) => {
+    if (!canEditSettings) {
+      setErrorMessage("This section is read-only for agents.");
+      return;
+    }
     setSavingOrder(true);
 
     const updates = orderedVisibleCategories.map((category, index) =>
@@ -229,7 +240,7 @@ export function CategorySettingsTable() {
   };
 
   const handleDrop = (targetId: string) => {
-    if (!draggingId || draggingId === targetId || savingOrder) {
+    if (!canEditSettings || !draggingId || draggingId === targetId || savingOrder) {
       return;
     }
 
@@ -303,6 +314,7 @@ export function CategorySettingsTable() {
           </div>
           <Button
             type="button"
+            disabled={!canEditSettings}
             onClick={() => {
               openModal("createCategory", {
                 onCreated: handleCategoryCreated,
@@ -335,7 +347,7 @@ export function CategorySettingsTable() {
                   <tr
                     key={category.id}
                     className="border-b last:border-0"
-                    draggable={!savingOrder}
+                    draggable={!savingOrder && canEditSettings}
                     onDragStart={(event: DragEvent<HTMLTableRowElement>) => {
                       setDraggingId(category.id);
                       event.dataTransfer.effectAllowed = "move";
@@ -361,7 +373,7 @@ export function CategorySettingsTable() {
                     <td className="py-4 text-sm text-muted-foreground">{category.description ?? "—"}</td>
                     <td className="py-4 text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild disabled={!canEditSettings}>
                           <Button variant="ghost" size="icon" aria-label={`Open actions for ${category.name}`}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>

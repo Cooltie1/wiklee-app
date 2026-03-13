@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Label } from "@/components/ui/label";
+import { normalizeRole } from "@/lib/roles";
 import { supabase } from "@/lib/supabaseClient";
 import { useModal, type TicketCategoryRow } from "@/lib/useModal";
 
@@ -26,9 +27,30 @@ export function CategorySelect({ value, onChange, disabled }: CategorySelectProp
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [canCreateCategory, setCanCreateCategory] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+
+    const loadPermissions = async () => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+
+      if (!isMounted || authError || !authData.user) {
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (!isMounted || profileError) {
+        return;
+      }
+
+      setCanCreateCategory(normalizeRole(profileData.role) === "admin");
+    };
 
     const load = async () => {
       setIsLoading(true);
@@ -56,7 +78,8 @@ export function CategorySelect({ value, onChange, disabled }: CategorySelectProp
       setIsLoading(false);
     };
 
-    load();
+    void loadPermissions();
+    void load();
 
     return () => {
       isMounted = false;
@@ -106,13 +129,17 @@ export function CategorySelect({ value, onChange, disabled }: CategorySelectProp
           disabled={disabled}
           allowClear
           clearLabel="None"
-          action={{
-            label: "+ New category",
-            onClick: () =>
-              openModal("createCategory", {
-                onCreated: handleCategoryCreated,
-              }),
-          }}
+          action={
+            canCreateCategory
+              ? {
+                  label: "+ New category",
+                  onClick: () =>
+                    openModal("createCategory", {
+                      onCreated: handleCategoryCreated,
+                    }),
+                }
+              : undefined
+          }
         />
       </div>
       {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}

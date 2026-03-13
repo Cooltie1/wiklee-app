@@ -8,15 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 
-type UserRole = "agent" | "user";
+import { type UserRole } from "@/lib/roles";
 
 const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
+  { id: "admin", label: "Admin" },
   { id: "agent", label: "Agent" },
   { id: "user", label: "User" },
 ];
 
 function isUserRole(value: string): value is UserRole {
-  return value === "agent" || value === "user";
+  return value === "admin" || value === "agent" || value === "user";
 }
 
 export default function NewUserPage() {

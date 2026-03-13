@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabaseClient";
+import { normalizeRole } from "@/lib/roles";
 import { useModal, type TicketStatusRow } from "@/lib/useModal";
 
 type TicketStatus = {
@@ -47,6 +48,7 @@ export function StatusSettingsTable() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [canEditSettings, setCanEditSettings] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -67,7 +69,7 @@ export function StatusSettingsTable() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("org_id")
+        .select("org_id, role")
         .eq("id", authData.user.id)
         .single();
 
@@ -93,6 +95,7 @@ export function StatusSettingsTable() {
       }
 
       if (isMounted) {
+        setCanEditSettings(normalizeRole(profile.role) === "admin");
         setStatuses(orderStatuses((data ?? []) as TicketStatus[]));
         setLoading(false);
       }
@@ -179,6 +182,10 @@ export function StatusSettingsTable() {
   };
 
   const handleStatusActivated = async (statusId: string) => {
+    if (!canEditSettings) {
+      setErrorMessage("This section is read-only for agents.");
+      return;
+    }
     setStatusUpdatingId(statusId);
     setErrorMessage("");
 
@@ -241,7 +248,7 @@ export function StatusSettingsTable() {
   };
 
   const handleDrop = (targetId: string) => {
-    if (!draggingId || draggingId === targetId || savingOrder) {
+    if (!canEditSettings || !draggingId || draggingId === targetId || savingOrder) {
       return;
     }
 
@@ -317,6 +324,7 @@ export function StatusSettingsTable() {
           </div>
           <Button
             type="button"
+            disabled={!canEditSettings}
             onClick={() => {
               openModal("createStatus", {
                 onCreated: handleStatusCreated,
@@ -348,7 +356,7 @@ export function StatusSettingsTable() {
                   <tr
                     key={status.id}
                     className="border-b last:border-0"
-                    draggable={!savingOrder && !isSystemStatus(status)}
+                    draggable={!savingOrder && !isSystemStatus(status) && canEditSettings}
                     onDragStart={(event: DragEvent<HTMLTableRowElement>) => {
                       if (isSystemStatus(status)) {
                         return;
@@ -381,7 +389,7 @@ export function StatusSettingsTable() {
                         <span className="text-xs text-muted-foreground">System</span>
                       ) : (
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger asChild disabled={!canEditSettings}>
                             <Button variant="ghost" size="icon" aria-label={`Open actions for ${status.label}`}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>

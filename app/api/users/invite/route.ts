@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 type InviteBody = {
   email?: string;
-  role?: "agent" | "user";
+  role?: "admin" | "agent" | "user";
 };
+
+const ASSIGNABLE_ROLES = ["admin", "agent", "user"] as const;
 
 function getSupabaseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
@@ -52,8 +54,8 @@ export async function POST(request: NextRequest) {
     .eq("id", currentUser.id)
     .single();
 
-  if (profileError || profile?.role !== "agent") {
-    return NextResponse.json({ error: "Only agents can invite users." }, { status: 403 });
+  if (profileError || (profile?.role !== "agent" && profile?.role !== "admin")) {
+    return NextResponse.json({ error: "Only agents or admins can invite users." }, { status: 403 });
   }
 
   if (!profile.org_id) {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
   const email = body.email?.trim().toLowerCase();
   const role = body.role;
 
-  if (!email || !role || !["agent", "user"].includes(role)) {
+  if (!email || !role || !ASSIGNABLE_ROLES.includes(role)) {
     return NextResponse.json({ error: "Email and role are required." }, { status: 400 });
   }
 

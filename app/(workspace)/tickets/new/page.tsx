@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
+import { isAgentLikeRole } from "@/lib/roles";
 
 type ProfileRow = {
   id: string;
@@ -47,7 +48,6 @@ export default function NewTicketPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [requesterLoadError, setRequesterLoadError] = useState("");
   const [ownerLoadError, setOwnerLoadError] = useState("");
-  const [ownerDisabledMessage, setOwnerDisabledMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -58,7 +58,6 @@ export default function NewTicketPage() {
       setIsLoadingUsers(true);
       setRequesterLoadError("");
       setOwnerLoadError("");
-      setOwnerDisabledMessage("");
 
       const { data: authData, error: authError } = await supabase.auth.getUser();
       const currentUser = authData.user;
@@ -70,7 +69,6 @@ export default function NewTicketPage() {
       if (authError || !currentUser) {
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents can assign owners");
         setIsLoadingUsers(false);
         return;
       }
@@ -98,7 +96,6 @@ export default function NewTicketPage() {
         setOwnerUsers([]);
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents can assign owners");
         setIsLoadingUsers(false);
         return;
       }
@@ -145,7 +142,7 @@ export default function NewTicketPage() {
       const normalizedRequesterList = hasCurrentUser ? requesterList : [fallbackCurrentUser, ...requesterList];
 
       const owners = usersWithAvatars
-        .filter((user) => user.role === "agent")
+        .filter((user) => isAgentLikeRole(user.role))
         .map((user) => ({
           id: user.id,
           display_name: user.display_name,
@@ -167,12 +164,12 @@ export default function NewTicketPage() {
   }, []);
 
   const isOwnerDisabled = useMemo(() => {
-    if (!currentUserId || ownerDisabledMessage) {
+    if (!currentUserId) {
       return true;
     }
 
     return false;
-  }, [currentUserId, ownerDisabledMessage]);
+  }, [currentUserId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -256,7 +253,6 @@ export default function NewTicketPage() {
           onChange={setOwnerId}
           disabled={isLoadingUsers || isOwnerDisabled}
           errorMessage={ownerLoadError}
-          disabledMessage={ownerDisabledMessage}
         />
 
         <PrioritySelect value={priorityId} onChange={setPriorityId} />

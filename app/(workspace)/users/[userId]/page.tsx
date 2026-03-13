@@ -5,14 +5,14 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AvatarUploader } from "@/components/AvatarUploader";
+import { UserAvatar } from "@/components/UserAvatar";
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
 import { getUserDisplayName } from "@/lib/userDisplayName";
-
-type UserRole = "agent" | "user";
+import { normalizeRole, type UserRole } from "@/lib/roles";
 
 type UserProfile = {
   id: string;
@@ -25,6 +25,7 @@ type UserProfile = {
 };
 
 const ROLE_OPTIONS: Array<{ id: UserRole; label: string }> = [
+  { id: "admin", label: "Admin" },
   { id: "agent", label: "Agent" },
   { id: "user", label: "User" },
 ];
@@ -33,12 +34,24 @@ function getDisplayName(profile: Pick<UserProfile, "display_name" | "first_name"
   return getUserDisplayName(profile);
 }
 
-function UserDetailContent({ profile }: { profile: UserProfile }) {
+function UserDetailContent({
+  profile,
+  canEditProfile,
+  canEditRole,
+}: {
+  profile: UserProfile;
+  canEditProfile: boolean;
+  canEditRole: boolean;
+}) {
   const [avatarPath, setAvatarPath] = useState(profile.avatar_path);
 
   const firstNameAutosave = useFieldAutosave<string>({
     initialValue: profile.first_name ?? "",
     onSave: async (nextValue) => {
+      if (!canEditProfile) {
+        throw new Error("You do not have permission to update this profile.");
+      }
+
       const { error } = await supabase.from("profiles").update({ first_name: nextValue.trim() || null }).eq("id", profile.id);
       if (error) throw new Error(error.message);
     },
@@ -47,6 +60,10 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
   const lastNameAutosave = useFieldAutosave<string>({
     initialValue: profile.last_name ?? "",
     onSave: async (nextValue) => {
+      if (!canEditProfile) {
+        throw new Error("You do not have permission to update this profile.");
+      }
+
       const { error } = await supabase.from("profiles").update({ last_name: nextValue.trim() || null }).eq("id", profile.id);
       if (error) throw new Error(error.message);
     },
@@ -55,6 +72,10 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
   const displayNameAutosave = useFieldAutosave<string>({
     initialValue: profile.display_name ?? "",
     onSave: async (nextValue) => {
+      if (!canEditProfile) {
+        throw new Error("You do not have permission to update this profile.");
+      }
+
       const { error } = await supabase.from("profiles").update({ display_name: nextValue.trim() || null }).eq("id", profile.id);
       if (error) throw new Error(error.message);
     },
@@ -63,6 +84,10 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
   const roleAutosave = useFieldAutosave<UserRole>({
     initialValue: profile.role ?? "user",
     onSave: async (nextValue) => {
+      if (!canEditRole) {
+        throw new Error("You do not have permission to update this user role.");
+      }
+
       const { error } = await supabase.from("profiles").update({ role: nextValue }).eq("id", profile.id);
       if (error) throw new Error(error.message);
     },
@@ -100,6 +125,7 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
               id="first-name"
               value={firstNameAutosave.currentValue}
               onChange={(event) => firstNameAutosave.setValue(event.target.value)}
+              disabled={!canEditProfile}
             />
           </div>
 
@@ -109,6 +135,7 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
               id="last-name"
               value={lastNameAutosave.currentValue}
               onChange={(event) => lastNameAutosave.setValue(event.target.value)}
+              disabled={!canEditProfile}
             />
           </div>
 
@@ -118,6 +145,7 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
               id="display-name"
               value={displayNameAutosave.currentValue}
               onChange={(event) => displayNameAutosave.setValue(event.target.value)}
+              disabled={!canEditProfile}
             />
           </div>
 
@@ -133,7 +161,7 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
                 items={ROLE_OPTIONS}
                 selectedId={roleAutosave.currentValue}
                 onSelect={(selectedRole) => {
-                  if (selectedRole === "agent" || selectedRole === "user") {
+                  if (selectedRole === "admin" || selectedRole === "agent" || selectedRole === "user") {
                     roleAutosave.setValue(selectedRole);
                   }
                 }}
@@ -141,6 +169,7 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
                 placeholder="Select role"
                 searchable={false}
                 emptyText="No roles found"
+                disabled={!canEditRole}
               />
             </div>
           </div>
@@ -149,6 +178,7 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
         <div className="mt-6 space-y-1 text-xs">
           {sidebarStatus ? <p className="text-zinc-500">{sidebarStatus}</p> : null}
           {autosaveError ? <p className="text-red-600">{autosaveError}</p> : null}
+          {!canEditProfile ? <p className="text-zinc-500">This profile is read-only for your role.</p> : null}
         </div>
       </aside>
 
@@ -167,14 +197,18 @@ function UserDetailContent({ profile }: { profile: UserProfile }) {
           </nav>
 
           <div className="mt-4 flex items-center gap-3">
-            <AvatarUploader
-              userId={profile.id}
-              name={displayName}
-              avatarPath={avatarPath}
-              sizeClassName="size-12"
-              tooltipText="Update avatar"
-              onAvatarUpdated={setAvatarPath}
-            />
+            {canEditProfile ? (
+              <AvatarUploader
+                userId={profile.id}
+                name={displayName}
+                avatarPath={avatarPath}
+                sizeClassName="size-12"
+                tooltipText="Update avatar"
+                onAvatarUpdated={setAvatarPath}
+              />
+            ) : (
+              <UserAvatar userId={profile.id} name={displayName} avatarPath={avatarPath} className="size-12" />
+            )}
             <h1 className="text-2xl font-semibold text-zinc-900">{displayName}</h1>
           </div>
         </div>
@@ -192,6 +226,8 @@ export default function UserDetailPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -199,6 +235,41 @@ export default function UserDetailPage() {
     async function loadProfile() {
       setIsLoading(true);
       setLoadError("");
+
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const currentUser = authData.user;
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (authError || !currentUser) {
+        setProfile(null);
+        setLoadError("Unable to load user details.");
+        setIsLoading(false);
+        return;
+      }
+
+      setCurrentUserId(currentUser.id);
+
+      const { data: currentUserProfile, error: currentUserProfileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", currentUser.id)
+        .single();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (currentUserProfileError) {
+        setProfile(null);
+        setLoadError("Unable to load user details.");
+        setIsLoading(false);
+        return;
+      }
+
+      setCurrentUserRole(normalizeRole(currentUserProfile?.role));
 
       const { data, error } = await supabase
         .from("profiles")
@@ -236,5 +307,9 @@ export default function UserDetailPage() {
     return <p className="text-sm text-red-600">{loadError || "User not found."}</p>;
   }
 
-  return <UserDetailContent profile={profile} />;
+  const isOwnProfile = currentUserId === profile.id;
+  const canEditRole = currentUserRole === "admin";
+  const canEditProfile = isOwnProfile || currentUserRole === "admin";
+
+  return <UserDetailContent profile={profile} canEditProfile={canEditProfile} canEditRole={canEditRole} />;
 }
