@@ -17,7 +17,17 @@ import { supabase } from "@/lib/supabaseClient";
 import { isAgentLikeRole } from "@/lib/roles";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
 import { getUserDisplayName } from "@/lib/userDisplayName";
+import {
+  buildValueUpsertRow,
+  type CustomFieldFormValue,
+  formatCustomFieldValue,
+  getFormValueFromRow,
+  isCustomFieldMissingValue,
+  type TicketFieldDefinition,
+  type TicketFieldValueRow,
+} from "@/lib/ticketCustomFields";
 import { TicketCommentComposer } from "@/components/tickets/TicketCommentComposer";
+import { CustomFieldsSection } from "@/components/tickets/custom-fields/CustomFieldsSection";
 import {
   TicketCommentThread,
   type TicketCommentThreadItem,
@@ -40,6 +50,7 @@ type TicketRow = {
 
 type ProfileRow = {
   id: string;
+  org_id?: string | null;
   display_name: string | null;
   first_name: string | null;
   last_name: string | null;
@@ -154,13 +165,27 @@ type TicketDetailContentProps = {
   requesterUsers: ComboboxUser[];
   ownerUsers: ComboboxUser[];
   usersById: Record<string, TicketCommentThreadUser>;
+  customFieldDefinitions: TicketFieldDefinition[];
+  initialCustomFieldValues: Record<string, CustomFieldFormValue>;
 };
 
-function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers, usersById }: TicketDetailContentProps) {
+function TicketDetailContent({
+  ticket,
+  currentUserId,
+  requesterUsers,
+  ownerUsers,
+  usersById,
+  customFieldDefinitions,
+  initialCustomFieldValues,
+}: TicketDetailContentProps) {
   const [comments, setComments] = useState<TicketCommentThreadItem[]>([]);
   const [events, setEvents] = useState<TicketCommentThreadItem[]>([]);
   const [commentsError, setCommentsError] = useState("");
   const [titleValidationError, setTitleValidationError] = useState("");
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, CustomFieldFormValue>>(initialCustomFieldValues);
+  const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string>>({});
+  const [isSavingCustomFields, setIsSavingCustomFields] = useState(false);
+  const [customFieldSaveError, setCustomFieldSaveError] = useState("");
 
   async function loadTimelineEntries() {
     const [commentsResult, eventsResult] = await Promise.all([
@@ -207,6 +232,12 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
     void loadTimelineEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.id]);
+  useEffect(() => {
+    setCustomFieldValues(initialCustomFieldValues);
+    setCustomFieldErrors({});
+    setCustomFieldSaveError("");
+  }, [initialCustomFieldValues, ticket.id]);
+
 
   const requesterAutosave = useFieldAutosave<string | null>({
     initialValue: ticket.requester_id,
@@ -296,6 +327,43 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
     return "";
   }, [autosaveError, isAnySaved, isAnySaving]);
 
+  const handleSaveCustomFields = async () => {
+    const validationErrors = customFieldDefinitions.reduce<Record<string, string>>((acc, definition) => {
+      if (isCustomFieldMissingValue(definition, customFieldValues[definition.id] ?? null)) {
+        acc[definition.id] = `${definition.label} is required.`;
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(validationErrors).length > 0) {
+      setCustomFieldErrors(validationErrors);
+      return;
+    }
+
+    setCustomFieldErrors({});
+    setCustomFieldSaveError("");
+    setIsSavingCustomFields(true);
+
+    const upsertRows = customFieldDefinitions.map((definition) =>
+      buildValueUpsertRow(ticket.id, definition, customFieldValues[definition.id] ?? null)
+    );
+
+    const { error } = await supabase
+      .from("ticket_field_values")
+      .upsert(upsertRows, { onConflict: "ticket_id,field_definition_id" });
+
+    setIsSavingCustomFields(false);
+
+    if (error) {
+      setCustomFieldSaveError(error.message || "Unable to save custom fields.");
+      return;
+    }
+  };
+
+  const customFieldSummary = customFieldDefinitions
+    .map((definition) => ({ label: definition.label, value: formatCustomFieldValue(definition, customFieldValues[definition.id] ?? null) }))
+    .filter((item) => item.value !== "—");
+
   const ticketDescriptionComment = useMemo<TicketCommentThreadItem | null>(() => {
     const description = ticket.description?.trim();
 
@@ -360,6 +428,34 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
           <StatusSelect value={statusAutosave.currentValue} onChange={statusAutosave.setValue} />
           <CategorySelect value={categoryAutosave.currentValue} onChange={categoryAutosave.setValue} />
           <PrioritySelect value={priorityAutosave.currentValue} onChange={priorityAutosave.setValue} />
+
+          <CustomFieldsSection
+            definitions={customFieldDefinitions}
+            values={customFieldValues}
+            onChange={(fieldDefinitionId, nextValue) => {
+              setCustomFieldValues((previous) => ({ ...previous, [fieldDefinitionId]: nextValue }));
+              setCustomFieldErrors((previous) => {
+                if (!previous[fieldDefinitionId]) return previous;
+                const next = { ...previous };
+                delete next[fieldDefinitionId];
+                return next;
+              });
+            }}
+            validationErrors={customFieldErrors}
+            disabled={isSavingCustomFields}
+          />
+
+          {customFieldDefinitions.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => void handleSaveCustomFields()}
+              disabled={isSavingCustomFields}
+              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingCustomFields ? "Saving custom fields..." : "Save custom fields"}
+            </button>
+          ) : null}
+          {customFieldSaveError ? <p className="text-xs text-red-600">{customFieldSaveError}</p> : null}
         </div>
 
         <div className="mt-6 space-y-1 text-xs">
@@ -398,6 +494,16 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
             aria-invalid={isTitleBlank}
           />
           {titleValidationError ? <p className="mt-1 text-sm text-red-600">{titleValidationError}</p> : null}
+
+          {customFieldSummary.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {customFieldSummary.map((item) => (
+                <span key={item.label} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
+                  {item.label}: {item.value}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-6">
@@ -424,6 +530,8 @@ export default function TicketDetailPage() {
   const [ownerUsers, setOwnerUsers] = useState<ComboboxUser[]>([]);
   const [usersById, setUsersById] = useState<Record<string, TicketCommentThreadUser>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<TicketFieldDefinition[]>([]);
+  const [customFieldValuesByDefinitionId, setCustomFieldValuesByDefinitionId] = useState<Record<string, CustomFieldFormValue>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -444,7 +552,7 @@ export default function TicketDetailPage() {
             )
             .eq("id", ticketId)
             .single(),
-          supabase.from("profiles").select("id, display_name, first_name, last_name, avatar_path, role"),
+          supabase.from("profiles").select("id, org_id, display_name, first_name, last_name, avatar_path, role"),
         ]);
 
       if (!isMounted) return;
@@ -458,8 +566,42 @@ export default function TicketDetailPage() {
       setCurrentUserId(authData.user?.id ?? null);
       setTicket(ticketData as TicketRow);
 
+      const profileRows = (profileData ?? []) as ProfileRow[];
+      const currentUserProfile = profileRows.find((profile) => profile.id === authData.user?.id);
+
+      if (currentUserProfile?.org_id) {
+        const [{ data: definitionData, error: definitionError }, { data: fieldValueData, error: fieldValueError }] = await Promise.all([
+          supabase
+            .from("ticket_field_definitions")
+            .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+            .eq("org_id", currentUserProfile.org_id)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("ticket_field_values")
+            .select("ticket_id, field_definition_id, value_text, value_number, value_boolean, value_date, value_datetime, value_json")
+            .eq("ticket_id", ticketId),
+        ]);
+
+        if (!definitionError && !fieldValueError) {
+          const loadedDefinitions = (definitionData ?? []) as TicketFieldDefinition[];
+          const valueByDefinitionId = new Map(
+            ((fieldValueData ?? []) as TicketFieldValueRow[]).map((row) => [row.field_definition_id, row])
+          );
+
+          setCustomFieldDefinitions(loadedDefinitions);
+          setCustomFieldValuesByDefinitionId(
+            loadedDefinitions.reduce<Record<string, CustomFieldFormValue>>((acc, definition) => {
+              acc[definition.id] = getFormValueFromRow(definition, valueByDefinitionId.get(definition.id));
+              return acc;
+            }, {})
+          );
+        }
+      }
+
       const usersWithAvatars = await Promise.all(
-        ((profileData ?? []) as ProfileRow[]).map(async (profile) => {
+        profileRows.map(async (profile) => {
           let avatarUrl: string | null = null;
           if (profile.avatar_path) {
             try {
@@ -542,6 +684,8 @@ export default function TicketDetailPage() {
             requesterUsers={requesterUsers}
             ownerUsers={ownerUsers}
             usersById={usersById}
+            customFieldDefinitions={customFieldDefinitions}
+            initialCustomFieldValues={customFieldValuesByDefinitionId}
           />
         )}
       </section>
