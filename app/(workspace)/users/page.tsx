@@ -7,6 +7,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserDisplayName } from "@/lib/userDisplayName";
+import { getRoleLabel, isAgentLikeRole } from "@/lib/roles";
 
 type ProfileRow = {
   id: string;
@@ -26,11 +27,7 @@ function getDisplayName(profile: Pick<ProfileRow, "display_name" | "first_name" 
 }
 
 function getDisplayRole(role: string | null) {
-  if (!role) {
-    return "User";
-  }
-
-  return role.toLowerCase() === "agent" ? "Agent" : "User";
+  return getRoleLabel(role);
 }
 
 function getRelativeUpdated(updatedAt: string | null) {
@@ -147,7 +144,7 @@ export default function UsersPage() {
     }
 
     return profiles.filter((profile) => {
-      const isAgent = profile.role?.toLowerCase() === "agent";
+      const isAgent = isAgentLikeRole(profile.role);
       return selectedFilter === "agents" ? isAgent : !isAgent;
     });
   }, [profiles, selectedFilter]);
@@ -164,7 +161,7 @@ export default function UsersPage() {
       <div className="space-y-3">
         <div>
           <h2 className="text-4xl font-bold">Users</h2>
-          <p className="text-sm text-zinc-500">Manage users and agents in one place.</p>
+          <p className="text-sm text-zinc-500">Manage users, agents, and admins in one place.</p>
         </div>
 
         <div className="flex items-center gap-2" role="radiogroup" aria-label="Filter users by role">
@@ -186,7 +183,7 @@ export default function UsersPage() {
             role="radio"
             aria-checked={selectedFilter === "agents"}
           >
-            Agents
+            Agents/Admins
           </Button>
           <Button
             type="button"

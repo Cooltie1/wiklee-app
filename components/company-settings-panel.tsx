@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
+import { normalizeRole } from "@/lib/roles";
 
 type CompanyState = {
   orgId: string;
@@ -27,6 +28,7 @@ export function CompanySettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [canEditSettings, setCanEditSettings] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -41,7 +43,7 @@ export function CompanySettingsPanel() {
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("org_id")
+        .select("org_id, role")
         .eq("id", user.id)
         .single();
 
@@ -50,6 +52,8 @@ export function CompanySettingsPanel() {
         setLoading(false);
         return;
       }
+
+      setCanEditSettings(normalizeRole(profileData.role) === "admin");
 
       const { data: orgData, error: orgError } = await supabase
         .from("orgs")
@@ -74,6 +78,11 @@ export function CompanySettingsPanel() {
 
   async function saveCompanyDetails() {
     if (!company) {
+      return;
+    }
+
+    if (!canEditSettings) {
+      setError("You do not have permission to update company settings.");
       return;
     }
 
@@ -143,7 +152,7 @@ export function CompanySettingsPanel() {
             setSaveMessage(null);
             setError(null);
           }}
-          disabled={saving}
+          disabled={saving || !canEditSettings}
           placeholder="Acme Inc"
         />
       </div>
@@ -160,7 +169,7 @@ export function CompanySettingsPanel() {
               setSaveMessage(null);
               setError(null);
             }}
-            disabled={saving}
+            disabled={saving || !canEditSettings}
             className="border-0 shadow-none focus-visible:ring-0"
             placeholder="acme"
           />
@@ -168,12 +177,13 @@ export function CompanySettingsPanel() {
         </div>
       </div>
 
-      <Button onClick={saveCompanyDetails} disabled={saving} className="w-fit">
+      <Button onClick={saveCompanyDetails} disabled={saving || !canEditSettings} className="w-fit">
         {saving ? "Saving..." : "Save company info"}
       </Button>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {saveMessage ? <p className="text-sm text-emerald-600">{saveMessage}</p> : null}
+      {!canEditSettings ? <p className="text-sm text-muted-foreground">This section is read-only for agents.</p> : null}
     </div>
   );
 }

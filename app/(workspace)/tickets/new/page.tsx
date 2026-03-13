@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
+import { isAgentLikeRole } from "@/lib/roles";
 
 type ProfileRow = {
   id: string;
@@ -70,7 +71,7 @@ export default function NewTicketPage() {
       if (authError || !currentUser) {
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents can assign owners");
+        setOwnerDisabledMessage("Only agents or admins can assign owners");
         setIsLoadingUsers(false);
         return;
       }
@@ -98,7 +99,7 @@ export default function NewTicketPage() {
         setOwnerUsers([]);
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents can assign owners");
+        setOwnerDisabledMessage("Only agents or admins can assign owners");
         setIsLoadingUsers(false);
         return;
       }
@@ -145,7 +146,7 @@ export default function NewTicketPage() {
       const normalizedRequesterList = hasCurrentUser ? requesterList : [fallbackCurrentUser, ...requesterList];
 
       const owners = usersWithAvatars
-        .filter((user) => user.role === "agent")
+        .filter((user) => isAgentLikeRole(user.role))
         .map((user) => ({
           id: user.id,
           display_name: user.display_name,

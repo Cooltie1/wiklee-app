@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabaseClient";
+import { normalizeRole } from "@/lib/roles";
 import { useModal, type TicketPriorityRow } from "@/lib/useModal";
 
 type TicketPriority = {
@@ -43,6 +44,7 @@ export function PrioritySettingsTable() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [canEditSettings, setCanEditSettings] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,7 +65,7 @@ export function PrioritySettingsTable() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("org_id")
+        .select("org_id, role")
         .eq("id", authData.user.id)
         .single();
 
@@ -90,6 +92,7 @@ export function PrioritySettingsTable() {
 
       if (isMounted) {
         setOrgId(profile.org_id);
+        setCanEditSettings(normalizeRole(profile.role) === "admin");
         setPriorities(orderPriorities((data ?? []) as TicketPriority[]));
         setLoading(false);
       }
@@ -169,6 +172,10 @@ export function PrioritySettingsTable() {
   };
 
   const handlePriorityActivated = async (priorityId: string) => {
+    if (!canEditSettings) {
+      setErrorMessage("This section is read-only for agents.");
+      return;
+    }
     setStatusUpdatingId(priorityId);
     setErrorMessage("");
 
@@ -206,6 +213,10 @@ export function PrioritySettingsTable() {
   };
 
   const persistOrder = async (orderedVisiblePriorities: TicketPriority[]) => {
+    if (!canEditSettings) {
+      setErrorMessage("This section is read-only for agents.");
+      return;
+    }
     if (!orgId) {
       setErrorMessage("Unable to determine your organization");
       return;
@@ -245,7 +256,7 @@ export function PrioritySettingsTable() {
   };
 
   const handleDrop = (targetId: string) => {
-    if (!draggingId || draggingId === targetId || savingOrder) {
+    if (!canEditSettings || !draggingId || draggingId === targetId || savingOrder) {
       return;
     }
 
@@ -319,6 +330,7 @@ export function PrioritySettingsTable() {
           </div>
           <Button
             type="button"
+            disabled={!canEditSettings}
             onClick={() => {
               openModal("createPriority", {
                 onCreated: handlePriorityCreated,
@@ -350,7 +362,7 @@ export function PrioritySettingsTable() {
                   <tr
                     key={priority.id}
                     className="border-b last:border-0"
-                    draggable={!savingOrder}
+                    draggable={!savingOrder && canEditSettings}
                     onDragStart={(event: DragEvent<HTMLTableRowElement>) => {
                       setDraggingId(priority.id);
                       event.dataTransfer.effectAllowed = "move";
@@ -375,7 +387,7 @@ export function PrioritySettingsTable() {
                     <td className="py-4 text-sm text-muted-foreground">{priority.description ?? "—"}</td>
                     <td className="py-4 text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild disabled={!canEditSettings}>
                           <Button variant="ghost" size="icon" aria-label={`Open actions for ${priority.label}`}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>

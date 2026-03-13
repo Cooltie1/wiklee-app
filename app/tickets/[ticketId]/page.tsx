@@ -14,6 +14,7 @@ import { StatusSelect } from "@/components/lookup/StatusSelect";
 import { Input } from "@/components/ui/input";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
+import { isAgentLikeRole } from "@/lib/roles";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
 import { getUserDisplayName } from "@/lib/userDisplayName";
 import { TicketCommentComposer } from "@/components/tickets/TicketCommentComposer";
@@ -505,7 +506,7 @@ export default function TicketDetailPage() {
       );
       setOwnerUsers(
         usersWithAvatars
-          .filter((user) => user.role === "agent")
+          .filter((user) => isAgentLikeRole(user.role))
           .map((user) => ({
             id: user.id,
             display_name: user.display_name,
