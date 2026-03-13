@@ -48,7 +48,6 @@ export default function NewTicketPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [requesterLoadError, setRequesterLoadError] = useState("");
   const [ownerLoadError, setOwnerLoadError] = useState("");
-  const [ownerDisabledMessage, setOwnerDisabledMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -59,7 +58,6 @@ export default function NewTicketPage() {
       setIsLoadingUsers(true);
       setRequesterLoadError("");
       setOwnerLoadError("");
-      setOwnerDisabledMessage("");
 
       const { data: authData, error: authError } = await supabase.auth.getUser();
       const currentUser = authData.user;
@@ -71,7 +69,6 @@ export default function NewTicketPage() {
       if (authError || !currentUser) {
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents or admins can assign owners");
         setIsLoadingUsers(false);
         return;
       }
@@ -99,7 +96,6 @@ export default function NewTicketPage() {
         setOwnerUsers([]);
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
-        setOwnerDisabledMessage("Only agents or admins can assign owners");
         setIsLoadingUsers(false);
         return;
       }
@@ -168,12 +164,12 @@ export default function NewTicketPage() {
   }, []);
 
   const isOwnerDisabled = useMemo(() => {
-    if (!currentUserId || ownerDisabledMessage) {
+    if (!currentUserId) {
       return true;
     }
 
     return false;
-  }, [currentUserId, ownerDisabledMessage]);
+  }, [currentUserId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -257,7 +253,6 @@ export default function NewTicketPage() {
           onChange={setOwnerId}
           disabled={isLoadingUsers || isOwnerDisabled}
           errorMessage={ownerLoadError}
-          disabledMessage={ownerDisabledMessage}
         />
 
         <PrioritySelect value={priorityId} onChange={setPriorityId} />
