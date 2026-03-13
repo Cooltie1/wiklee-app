@@ -1,5 +1,5 @@
 import { format, parse } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import {
   type CustomFieldFormValue,
   formatCustomFieldValue,
@@ -40,6 +39,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
   const requiredMark = definition.is_required ? " *" : "";
   const presentation = definition.config ?? {};
   const placeholder = typeof presentation.placeholder === "string" ? presentation.placeholder : "";
+  const selectedDate = parseDateValue(value);
 
   if (readOnly) {
     return (
@@ -77,19 +77,20 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
               id={definition.id}
               type="button"
               variant="outline"
-              className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground")}
+              data-empty={!selectedDate}
+              className="w-full justify-between text-left font-normal data-[empty=true]:text-muted-foreground"
               disabled={disabled}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {parseDateValue(value) ? format(parseDateValue(value) as Date, "PPP") : placeholder || "Pick a date"}
+              {selectedDate ? format(selectedDate, "PPP") : <span>{placeholder || "Pick a date"}</span>}
+              <ChevronDownIcon className="size-4 opacity-60" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
-              selected={parseDateValue(value)}
+              selected={selectedDate}
               onSelect={(selectedDate) => onChange(selectedDate ? format(selectedDate, "yyyy-MM-dd") : null)}
-              initialFocus
+              defaultMonth={selectedDate}
             />
           </PopoverContent>
         </Popover>
