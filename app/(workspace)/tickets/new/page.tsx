@@ -7,16 +7,25 @@ import { OwnerSelect } from "@/components/OwnerSelect";
 import { RequesterSelect } from "@/components/RequesterSelect";
 import { CategorySelect } from "@/components/lookup/CategorySelect";
 import { PrioritySelect } from "@/components/lookup/PrioritySelect";
+import { CustomFieldsSection } from "@/components/tickets/custom-fields/CustomFieldsSection";
 import type { ComboboxUser } from "@/components/UserCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAvatarSignedUrl } from "@/lib/avatarSignedUrl";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  buildValueUpsertRow,
+  type CustomFieldFormValue,
+  getFormValueFromRow,
+  isCustomFieldMissingValue,
+  type TicketFieldDefinition,
+} from "@/lib/ticketCustomFields";
 import { isAgentLikeRole } from "@/lib/roles";
 
 type ProfileRow = {
   id: string;
+  org_id: string | null;
   display_name: string | null;
   first_name: string | null;
   last_name: string | null;
@@ -50,6 +59,10 @@ export default function NewTicketPage() {
   const [ownerLoadError, setOwnerLoadError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<TicketFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, CustomFieldFormValue>>({});
+  const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string>>({});
+  const [isLoadingCustomFields, setIsLoadingCustomFields] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -70,6 +83,7 @@ export default function NewTicketPage() {
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
         setIsLoadingUsers(false);
+        setIsLoadingCustomFields(false);
         return;
       }
 
@@ -85,7 +99,7 @@ export default function NewTicketPage() {
 
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
-        .select("id, display_name, first_name, last_name, avatar_path, role");
+        .select("id, org_id, display_name, first_name, last_name, avatar_path, role");
 
       if (!isMounted) {
         return;
@@ -97,10 +111,36 @@ export default function NewTicketPage() {
         setRequesterLoadError("Unable to load users");
         setOwnerLoadError("Unable to load users");
         setIsLoadingUsers(false);
+        setIsLoadingCustomFields(false);
         return;
       }
 
       const rows = (profiles ?? []) as ProfileRow[];
+      const currentUserProfile = rows.find((profile) => profile.id === currentUser.id);
+
+      if (currentUserProfile?.org_id) {
+        const { data: definitions, error: definitionsError } = await supabase
+          .from("ticket_field_definitions")
+          .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+          .eq("org_id", currentUserProfile.org_id)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (!definitionsError) {
+          const loadedDefinitions = (definitions ?? []) as TicketFieldDefinition[];
+          setCustomFieldDefinitions(loadedDefinitions);
+          setCustomFieldValues(
+            loadedDefinitions.reduce<Record<string, CustomFieldFormValue>>((acc, definition) => {
+              acc[definition.id] = getFormValueFromRow(definition, undefined);
+              return acc;
+            }, {})
+          );
+        }
+      }
+
+      setIsLoadingCustomFields(false);
+
       const usersWithAvatars = await Promise.all(
         rows.map(async (profile) => {
           let avatarUrl: string | null = null;
@@ -182,6 +222,20 @@ export default function NewTicketPage() {
 
     const resolvedRequesterId = requesterId ?? currentUserId;
 
+    const validationErrors = customFieldDefinitions.reduce<Record<string, string>>((acc, definition) => {
+      if (isCustomFieldMissingValue(definition, customFieldValues[definition.id] ?? null)) {
+        acc[definition.id] = `${definition.label} is required.`;
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(validationErrors).length > 0) {
+      setCustomFieldErrors(validationErrors);
+      return;
+    }
+
+    setCustomFieldErrors({});
+
     setIsSaving(true);
 
     const { data, error } = await supabase
@@ -197,12 +251,29 @@ export default function NewTicketPage() {
       .select("id")
       .single();
 
-    setIsSaving(false);
-
     if (error || !data?.id) {
+      setIsSaving(false);
       setErrorMessage(error?.message ?? "Unable to create ticket.");
       return;
     }
+
+    if (customFieldDefinitions.length > 0) {
+      const customValueRows = customFieldDefinitions.map((definition) =>
+        buildValueUpsertRow(data.id, definition, customFieldValues[definition.id] ?? null)
+      );
+
+      const { error: customFieldError } = await supabase
+        .from("ticket_field_values")
+        .upsert(customValueRows, { onConflict: "ticket_id,field_definition_id" });
+
+      if (customFieldError) {
+        setIsSaving(false);
+        setErrorMessage(customFieldError.message || "Unable to save custom fields.");
+        return;
+      }
+    }
+
+    setIsSaving(false);
 
     router.push(`/tickets/${data.id}`);
   };
@@ -258,6 +329,25 @@ export default function NewTicketPage() {
         <PrioritySelect value={priorityId} onChange={setPriorityId} />
 
         <CategorySelect value={categoryId} onChange={setCategoryId} />
+
+        <CustomFieldsSection
+          definitions={customFieldDefinitions}
+          values={customFieldValues}
+          onChange={(fieldDefinitionId, nextValue) => {
+            setCustomFieldValues((previous) => ({ ...previous, [fieldDefinitionId]: nextValue }));
+            setCustomFieldErrors((previous) => {
+              if (!previous[fieldDefinitionId]) {
+                return previous;
+              }
+
+              const next = { ...previous };
+              delete next[fieldDefinitionId];
+              return next;
+            });
+          }}
+          validationErrors={customFieldErrors}
+          disabled={isSaving || isLoadingCustomFields}
+        />
 
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
 

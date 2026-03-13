@@ -17,7 +17,16 @@ import { supabase } from "@/lib/supabaseClient";
 import { isAgentLikeRole } from "@/lib/roles";
 import { useFieldAutosave } from "@/lib/useFieldAutosave";
 import { getUserDisplayName } from "@/lib/userDisplayName";
+import {
+  buildValueUpsertRow,
+  type CustomFieldFormValue,
+  getFormValueFromRow,
+  isCustomFieldMissingValue,
+  type TicketFieldDefinition,
+  type TicketFieldValueRow,
+} from "@/lib/ticketCustomFields";
 import { TicketCommentComposer } from "@/components/tickets/TicketCommentComposer";
+import { CustomFieldsSection } from "@/components/tickets/custom-fields/CustomFieldsSection";
 import {
   TicketCommentThread,
   type TicketCommentThreadItem,
@@ -40,6 +49,7 @@ type TicketRow = {
 
 type ProfileRow = {
   id: string;
+  org_id?: string | null;
   display_name: string | null;
   first_name: string | null;
   last_name: string | null;
@@ -154,13 +164,29 @@ type TicketDetailContentProps = {
   requesterUsers: ComboboxUser[];
   ownerUsers: ComboboxUser[];
   usersById: Record<string, TicketCommentThreadUser>;
+  customFieldDefinitions: TicketFieldDefinition[];
+  initialCustomFieldValues: Record<string, CustomFieldFormValue>;
 };
 
-function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers, usersById }: TicketDetailContentProps) {
+function TicketDetailContent({
+  ticket,
+  currentUserId,
+  requesterUsers,
+  ownerUsers,
+  usersById,
+  customFieldDefinitions,
+  initialCustomFieldValues,
+}: TicketDetailContentProps) {
   const [comments, setComments] = useState<TicketCommentThreadItem[]>([]);
   const [events, setEvents] = useState<TicketCommentThreadItem[]>([]);
   const [commentsError, setCommentsError] = useState("");
   const [titleValidationError, setTitleValidationError] = useState("");
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, CustomFieldFormValue>>(initialCustomFieldValues);
+  const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string>>({});
+  const [isSavingCustomFields, setIsSavingCustomFields] = useState(false);
+  const [customFieldSaveError, setCustomFieldSaveError] = useState("");
+  const [customFieldSaveTick, setCustomFieldSaveTick] = useState(0);
+  const [hasEditedCustomFields, setHasEditedCustomFields] = useState(false);
 
   async function loadTimelineEntries() {
     const [commentsResult, eventsResult] = await Promise.all([
@@ -207,6 +233,15 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
     void loadTimelineEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.id]);
+  useEffect(() => {
+    setCustomFieldValues(initialCustomFieldValues);
+    setCustomFieldErrors({});
+    setCustomFieldSaveError("");
+    setIsSavingCustomFields(false);
+    setCustomFieldSaveTick(0);
+    setHasEditedCustomFields(false);
+  }, [initialCustomFieldValues, ticket.id]);
+
 
   const requesterAutosave = useFieldAutosave<string | null>({
     initialValue: ticket.requester_id,
@@ -291,10 +326,60 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
   const sidebarStatus = useMemo(() => {
     if (isAnySaving) return "Saving...";
+    if (isSavingCustomFields) return "Saving custom fields...";
     if (autosaveError) return "Unable to save changes";
+    if (customFieldSaveError) return "Unable to save custom fields";
+    if (customFieldSaveTick > 0) return "Saved";
     if (isAnySaved) return "Saved";
     return "";
-  }, [autosaveError, isAnySaved, isAnySaving]);
+  }, [autosaveError, customFieldSaveError, customFieldSaveTick, isAnySaved, isAnySaving, isSavingCustomFields]);
+
+  const saveCustomFields = async (nextValues: Record<string, CustomFieldFormValue>) => {
+    const validationErrors = customFieldDefinitions.reduce<Record<string, string>>((acc, definition) => {
+      if (isCustomFieldMissingValue(definition, nextValues[definition.id] ?? null)) {
+        acc[definition.id] = `${definition.label} is required.`;
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(validationErrors).length > 0) {
+      setCustomFieldErrors(validationErrors);
+      return;
+    }
+
+    setCustomFieldErrors({});
+    setCustomFieldSaveError("");
+    setIsSavingCustomFields(true);
+
+    const upsertRows = customFieldDefinitions.map((definition) =>
+      buildValueUpsertRow(ticket.id, definition, nextValues[definition.id] ?? null)
+    );
+
+    const { error } = await supabase
+      .from("ticket_field_values")
+      .upsert(upsertRows, { onConflict: "ticket_id,field_definition_id" });
+
+    setIsSavingCustomFields(false);
+
+    if (error) {
+      setCustomFieldSaveError(error.message || "Unable to save custom fields.");
+      return;
+    }
+    setCustomFieldSaveTick((current) => current + 1);
+  };
+
+  useEffect(() => {
+    if (!customFieldDefinitions.length || !hasEditedCustomFields) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void saveCustomFields(customFieldValues);
+    }, 400);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customFieldValues, customFieldDefinitions.length, hasEditedCustomFields, ticket.id]);
 
   const ticketDescriptionComment = useMemo<TicketCommentThreadItem | null>(() => {
     const description = ticket.description?.trim();
@@ -342,7 +427,7 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[240px_1fr] overflow-hidden bg-white">
-      <aside className="h-full border-r border-zinc-200 bg-white p-6">
+      <aside className="h-full overflow-y-auto border-r border-zinc-200 bg-white p-6">
         <div className="space-y-4">
           <RequesterSelect
             users={requesterUsers}
@@ -360,6 +445,24 @@ function TicketDetailContent({ ticket, currentUserId, requesterUsers, ownerUsers
           <StatusSelect value={statusAutosave.currentValue} onChange={statusAutosave.setValue} />
           <CategorySelect value={categoryAutosave.currentValue} onChange={categoryAutosave.setValue} />
           <PrioritySelect value={priorityAutosave.currentValue} onChange={priorityAutosave.setValue} />
+
+          <CustomFieldsSection
+            definitions={customFieldDefinitions}
+            values={customFieldValues}
+            onChange={(fieldDefinitionId, nextValue) => {
+              setHasEditedCustomFields(true);
+              setCustomFieldValues((previous) => ({ ...previous, [fieldDefinitionId]: nextValue }));
+              setCustomFieldErrors((previous) => {
+                if (!previous[fieldDefinitionId]) return previous;
+                const next = { ...previous };
+                delete next[fieldDefinitionId];
+                return next;
+              });
+            }}
+            validationErrors={customFieldErrors}
+            disabled={isSavingCustomFields}
+          />
+          {customFieldSaveError ? <p className="text-xs text-red-600">{customFieldSaveError}</p> : null}
         </div>
 
         <div className="mt-6 space-y-1 text-xs">
@@ -424,6 +527,8 @@ export default function TicketDetailPage() {
   const [ownerUsers, setOwnerUsers] = useState<ComboboxUser[]>([]);
   const [usersById, setUsersById] = useState<Record<string, TicketCommentThreadUser>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<TicketFieldDefinition[]>([]);
+  const [customFieldValuesByDefinitionId, setCustomFieldValuesByDefinitionId] = useState<Record<string, CustomFieldFormValue>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -444,7 +549,7 @@ export default function TicketDetailPage() {
             )
             .eq("id", ticketId)
             .single(),
-          supabase.from("profiles").select("id, display_name, first_name, last_name, avatar_path, role"),
+          supabase.from("profiles").select("id, org_id, display_name, first_name, last_name, avatar_path, role"),
         ]);
 
       if (!isMounted) return;
@@ -458,8 +563,42 @@ export default function TicketDetailPage() {
       setCurrentUserId(authData.user?.id ?? null);
       setTicket(ticketData as TicketRow);
 
+      const profileRows = (profileData ?? []) as ProfileRow[];
+      const currentUserProfile = profileRows.find((profile) => profile.id === authData.user?.id);
+
+      if (currentUserProfile?.org_id) {
+        const [{ data: definitionData, error: definitionError }, { data: fieldValueData, error: fieldValueError }] = await Promise.all([
+          supabase
+            .from("ticket_field_definitions")
+            .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+            .eq("org_id", currentUserProfile.org_id)
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("ticket_field_values")
+            .select("ticket_id, field_definition_id, value_text, value_number, value_boolean, value_date, value_datetime, value_json")
+            .eq("ticket_id", ticketId),
+        ]);
+
+        if (!definitionError && !fieldValueError) {
+          const loadedDefinitions = (definitionData ?? []) as TicketFieldDefinition[];
+          const valueByDefinitionId = new Map(
+            ((fieldValueData ?? []) as TicketFieldValueRow[]).map((row) => [row.field_definition_id, row])
+          );
+
+          setCustomFieldDefinitions(loadedDefinitions);
+          setCustomFieldValuesByDefinitionId(
+            loadedDefinitions.reduce<Record<string, CustomFieldFormValue>>((acc, definition) => {
+              acc[definition.id] = getFormValueFromRow(definition, valueByDefinitionId.get(definition.id));
+              return acc;
+            }, {})
+          );
+        }
+      }
+
       const usersWithAvatars = await Promise.all(
-        ((profileData ?? []) as ProfileRow[]).map(async (profile) => {
+        profileRows.map(async (profile) => {
           let avatarUrl: string | null = null;
           if (profile.avatar_path) {
             try {
@@ -542,6 +681,8 @@ export default function TicketDetailPage() {
             requesterUsers={requesterUsers}
             ownerUsers={ownerUsers}
             usersById={usersById}
+            customFieldDefinitions={customFieldDefinitions}
+            initialCustomFieldValues={customFieldValuesByDefinitionId}
           />
         )}
       </section>
