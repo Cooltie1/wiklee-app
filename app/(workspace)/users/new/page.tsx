@@ -82,6 +82,7 @@ export default function NewUserPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="name@company.com"
+            className="bg-white"
             required
           />
         </div>
