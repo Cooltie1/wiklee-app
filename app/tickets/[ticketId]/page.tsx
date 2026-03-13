@@ -20,7 +20,6 @@ import { getUserDisplayName } from "@/lib/userDisplayName";
 import {
   buildValueUpsertRow,
   type CustomFieldFormValue,
-  formatCustomFieldValue,
   getFormValueFromRow,
   isCustomFieldMissingValue,
   type TicketFieldDefinition,
@@ -186,6 +185,8 @@ function TicketDetailContent({
   const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string>>({});
   const [isSavingCustomFields, setIsSavingCustomFields] = useState(false);
   const [customFieldSaveError, setCustomFieldSaveError] = useState("");
+  const [customFieldSaveTick, setCustomFieldSaveTick] = useState(0);
+  const [hasEditedCustomFields, setHasEditedCustomFields] = useState(false);
 
   async function loadTimelineEntries() {
     const [commentsResult, eventsResult] = await Promise.all([
@@ -236,6 +237,9 @@ function TicketDetailContent({
     setCustomFieldValues(initialCustomFieldValues);
     setCustomFieldErrors({});
     setCustomFieldSaveError("");
+    setIsSavingCustomFields(false);
+    setCustomFieldSaveTick(0);
+    setHasEditedCustomFields(false);
   }, [initialCustomFieldValues, ticket.id]);
 
 
@@ -322,14 +326,17 @@ function TicketDetailContent({
 
   const sidebarStatus = useMemo(() => {
     if (isAnySaving) return "Saving...";
+    if (isSavingCustomFields) return "Saving custom fields...";
     if (autosaveError) return "Unable to save changes";
+    if (customFieldSaveError) return "Unable to save custom fields";
+    if (customFieldSaveTick > 0) return "Saved";
     if (isAnySaved) return "Saved";
     return "";
-  }, [autosaveError, isAnySaved, isAnySaving]);
+  }, [autosaveError, customFieldSaveError, customFieldSaveTick, isAnySaved, isAnySaving, isSavingCustomFields]);
 
-  const handleSaveCustomFields = async () => {
+  const saveCustomFields = async (nextValues: Record<string, CustomFieldFormValue>) => {
     const validationErrors = customFieldDefinitions.reduce<Record<string, string>>((acc, definition) => {
-      if (isCustomFieldMissingValue(definition, customFieldValues[definition.id] ?? null)) {
+      if (isCustomFieldMissingValue(definition, nextValues[definition.id] ?? null)) {
         acc[definition.id] = `${definition.label} is required.`;
       }
       return acc;
@@ -345,7 +352,7 @@ function TicketDetailContent({
     setIsSavingCustomFields(true);
 
     const upsertRows = customFieldDefinitions.map((definition) =>
-      buildValueUpsertRow(ticket.id, definition, customFieldValues[definition.id] ?? null)
+      buildValueUpsertRow(ticket.id, definition, nextValues[definition.id] ?? null)
     );
 
     const { error } = await supabase
@@ -358,11 +365,21 @@ function TicketDetailContent({
       setCustomFieldSaveError(error.message || "Unable to save custom fields.");
       return;
     }
+    setCustomFieldSaveTick((current) => current + 1);
   };
 
-  const customFieldSummary = customFieldDefinitions
-    .map((definition) => ({ label: definition.label, value: formatCustomFieldValue(definition, customFieldValues[definition.id] ?? null) }))
-    .filter((item) => item.value !== "—");
+  useEffect(() => {
+    if (!customFieldDefinitions.length || !hasEditedCustomFields) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void saveCustomFields(customFieldValues);
+    }, 400);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customFieldValues, customFieldDefinitions.length, hasEditedCustomFields, ticket.id]);
 
   const ticketDescriptionComment = useMemo<TicketCommentThreadItem | null>(() => {
     const description = ticket.description?.trim();
@@ -433,6 +450,7 @@ function TicketDetailContent({
             definitions={customFieldDefinitions}
             values={customFieldValues}
             onChange={(fieldDefinitionId, nextValue) => {
+              setHasEditedCustomFields(true);
               setCustomFieldValues((previous) => ({ ...previous, [fieldDefinitionId]: nextValue }));
               setCustomFieldErrors((previous) => {
                 if (!previous[fieldDefinitionId]) return previous;
@@ -444,17 +462,6 @@ function TicketDetailContent({
             validationErrors={customFieldErrors}
             disabled={isSavingCustomFields}
           />
-
-          {customFieldDefinitions.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => void handleSaveCustomFields()}
-              disabled={isSavingCustomFields}
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingCustomFields ? "Saving custom fields..." : "Save custom fields"}
-            </button>
-          ) : null}
           {customFieldSaveError ? <p className="text-xs text-red-600">{customFieldSaveError}</p> : null}
         </div>
 
@@ -494,16 +501,6 @@ function TicketDetailContent({
             aria-invalid={isTitleBlank}
           />
           {titleValidationError ? <p className="mt-1 text-sm text-red-600">{titleValidationError}</p> : null}
-
-          {customFieldSummary.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {customFieldSummary.map((item) => (
-                <span key={item.label} className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
-                  {item.label}: {item.value}
-                </span>
-              ))}
-            </div>
-          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-6">
