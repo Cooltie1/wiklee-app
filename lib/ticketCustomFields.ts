@@ -1,4 +1,4 @@
-export type TicketFieldType = "text" | "textarea" | "select" | "number" | "boolean" | "date" | "datetime" | "multi_select";
+export type TicketFieldType = "text" | "textarea" | "select" | "number" | "boolean" | "date" | "multi_select";
 
 export type TicketFieldDefinition = {
   id: string;
@@ -21,7 +21,6 @@ export type TicketFieldValueRow = {
   value_number: number | null;
   value_boolean: boolean | null;
   value_date: string | null;
-  value_datetime: string | null;
   value_json: unknown | null;
   created_at?: string;
   updated_at?: string;
@@ -88,8 +87,6 @@ export function getFormValueFromRow(definition: TicketFieldDefinition, row: Tick
       return row.value_boolean;
     case "date":
       return row.value_date;
-    case "datetime":
-      return row.value_datetime;
     case "multi_select":
       return Array.isArray(row.value_json) ? row.value_json.filter((item): item is string => typeof item === "string") : [];
     default:
@@ -157,7 +154,6 @@ export function buildValueUpsertRow(
     value_number: null,
     value_boolean: null,
     value_date: null,
-    value_datetime: null,
     value_json: null,
   } as TicketFieldValueRow;
 
@@ -175,9 +171,6 @@ export function buildValueUpsertRow(
       break;
     case "date":
       baseValue.value_date = typeof formValue === "string" && formValue ? formValue : null;
-      break;
-    case "datetime":
-      baseValue.value_datetime = typeof formValue === "string" && formValue ? formValue : null;
       break;
     case "multi_select":
       baseValue.value_json = Array.isArray(formValue) ? formValue : [];
