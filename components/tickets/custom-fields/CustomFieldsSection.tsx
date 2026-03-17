@@ -9,6 +9,7 @@ type CustomFieldsSectionProps = {
   disabled?: boolean;
   readOnly?: boolean;
   title?: string;
+  textFieldClassName?: string;
 };
 
 export function CustomFieldsSection({
@@ -19,6 +20,7 @@ export function CustomFieldsSection({
   disabled,
   readOnly,
   title = "Custom fields",
+  textFieldClassName,
 }: CustomFieldsSectionProps) {
   if (!definitions.length) {
     return null;
@@ -37,6 +39,7 @@ export function CustomFieldsSection({
             errorMessage={validationErrors?.[definition.id]}
             disabled={disabled}
             readOnly={readOnly}
+            textFieldClassName={textFieldClassName}
           />
         ))}
       </div>
