@@ -23,7 +23,68 @@ type CustomFieldRendererProps = {
   errorMessage?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  textFieldClassName?: string;
 };
+
+type CustomFieldMultiSelectProps = {
+  id: string;
+  options: Array<{ label: string; value: string }>;
+  selectedValues: string[];
+  onChange: (value: string[]) => void;
+  placeholder: string;
+  disabled?: boolean;
+};
+
+function CustomFieldMultiSelect({ id, options, selectedValues, onChange, placeholder, disabled }: CustomFieldMultiSelectProps) {
+  const selectedOptionLabels = options.filter((option) => selectedValues.includes(option.value)).map((option) => option.label);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          className="h-auto min-h-10 w-full items-start justify-between gap-2 py-2 text-left"
+          disabled={disabled}
+        >
+          {selectedOptionLabels.length ? (
+            <span className="min-w-0 whitespace-pre-line text-sm">{selectedOptionLabels.join("\n")}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">{placeholder}</span>
+          )}
+          <ChevronDownIcon className="mt-0.5 size-4 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-3" align="start">
+        <div className="space-y-2">
+          {options.length === 0 ? <p className="text-xs text-zinc-500">No options configured.</p> : null}
+          {options.map((option) => {
+            const isSelected = selectedValues.includes(option.value);
+
+            return (
+              <label key={option.value} className="flex items-center gap-2 text-sm text-zinc-700">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => {
+                    if (checked === true) {
+                      onChange([...selectedValues, option.value]);
+                      return;
+                    }
+
+                    onChange(selectedValues.filter((selectedValue) => selectedValue !== option.value));
+                  }}
+                  disabled={disabled}
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function parseDateValue(value: CustomFieldFormValue) {
   if (typeof value !== "string" || !value) {
@@ -34,7 +95,7 @@ function parseDateValue(value: CustomFieldFormValue) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-export function CustomFieldRenderer({ definition, value, onChange, errorMessage, disabled, readOnly }: CustomFieldRendererProps) {
+export function CustomFieldRenderer({ definition, value, onChange, errorMessage, disabled, readOnly, textFieldClassName }: CustomFieldRendererProps) {
   const options = getOptionsFromConfig(definition.config);
   const requiredMark = definition.is_required ? " *" : "";
   const presentation = definition.config ?? {};
@@ -67,6 +128,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
           placeholder={placeholder}
           required={definition.is_required}
           disabled={disabled}
+          className={textFieldClassName}
         />
       )}
 
@@ -108,6 +170,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
           required={definition.is_required}
           disabled={disabled}
           rows={typeof presentation.rows === "number" ? presentation.rows : 4}
+          className={textFieldClassName}
         />
       )}
 
@@ -123,6 +186,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
           placeholder={placeholder}
           required={definition.is_required}
           disabled={disabled}
+          className={textFieldClassName}
         />
       )}
 
@@ -152,31 +216,14 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
       )}
 
       {definition.field_type === "multi_select" && (
-        <div id={definition.id} className="space-y-2 rounded-md border border-zinc-200 p-3">
-          {options.length === 0 ? <p className="text-xs text-zinc-500">No options configured.</p> : null}
-          {options.map((option) => {
-            const selectedValues = Array.isArray(value) ? value : [];
-            const isSelected = selectedValues.includes(option.value);
-
-            return (
-              <label key={option.value} className="flex items-center gap-2 text-sm text-zinc-700">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={(checked) => {
-                    if (checked === true) {
-                      onChange([...selectedValues, option.value]);
-                      return;
-                    }
-
-                    onChange(selectedValues.filter((selectedValue) => selectedValue !== option.value));
-                  }}
-                  disabled={disabled}
-                />
-                <span>{option.label}</span>
-              </label>
-            );
-          })}
-        </div>
+        <CustomFieldMultiSelect
+          id={definition.id}
+          options={options}
+          selectedValues={Array.isArray(value) ? value : []}
+          onChange={onChange}
+          placeholder={placeholder || "Select one or more options"}
+          disabled={disabled}
+        />
       )}
 
       {errorMessage ? <p className="text-xs text-red-600">{errorMessage}</p> : null}
