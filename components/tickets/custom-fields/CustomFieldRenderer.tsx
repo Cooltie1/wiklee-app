@@ -40,6 +40,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
   const presentation = definition.config ?? {};
   const placeholder = typeof presentation.placeholder === "string" ? presentation.placeholder : "";
   const selectedDate = parseDateValue(value);
+  const isBooleanField = definition.field_type === "boolean";
 
   if (readOnly) {
     return (
@@ -55,8 +56,8 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
   }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={definition.id}>{`${definition.label}${requiredMark}`}</Label>
+    <div className={isBooleanField ? "space-y-1" : "space-y-2"}>
+      {!isBooleanField ? <Label htmlFor={definition.id}>{`${definition.label}${requiredMark}`}</Label> : null}
 
       {definition.field_type === "text" && (
         <Input
@@ -134,7 +135,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
             onCheckedChange={(checked) => onChange(checked === true)}
             disabled={disabled}
           />
-          <span>{typeof presentation.toggle_label === "string" ? presentation.toggle_label : "Enabled"}</span>
+          <span className="font-semibold">{`${definition.label}${requiredMark}`}</span>
         </label>
       )}
 
