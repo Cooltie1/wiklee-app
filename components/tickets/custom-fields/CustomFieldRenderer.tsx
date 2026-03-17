@@ -52,7 +52,7 @@ function CustomFieldMultiSelect({ id, options, selectedValues, onChange, placeho
             {selectedOptions.length ? (
               <div className="flex max-w-full flex-wrap gap-1.5 whitespace-normal">
                 {selectedOptions.map((option) => (
-                  <span key={option.value} className="max-w-full rounded-full bg-zinc-900 px-2 py-0.5 text-[11px] leading-4 text-white break-words">
+                  <span key={option.value} className="max-w-full rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] leading-4 text-white break-words">
                     {option.label}
                   </span>
                 ))}
