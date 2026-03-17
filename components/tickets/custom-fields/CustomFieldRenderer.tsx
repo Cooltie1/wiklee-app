@@ -36,7 +36,7 @@ type CustomFieldMultiSelectProps = {
 };
 
 function CustomFieldMultiSelect({ id, options, selectedValues, onChange, placeholder, disabled }: CustomFieldMultiSelectProps) {
-  const selectedOptionLabels = options.filter((option) => selectedValues.includes(option.value)).map((option) => option.label);
+  const selectedOptions = options.filter((option) => selectedValues.includes(option.value));
 
   return (
     <Popover>
@@ -48,11 +48,19 @@ function CustomFieldMultiSelect({ id, options, selectedValues, onChange, placeho
           className="h-auto min-h-10 w-full items-start justify-between gap-2 py-2 text-left"
           disabled={disabled}
         >
-          {selectedOptionLabels.length ? (
-            <span className="min-w-0 whitespace-pre-line text-sm">{selectedOptionLabels.join("\n")}</span>
-          ) : (
-            <span className="text-sm text-muted-foreground">{placeholder}</span>
-          )}
+          <span className="min-w-0 flex-1">
+            {selectedOptions.length ? (
+              <span className="flex flex-wrap gap-1.5">
+                {selectedOptions.map((option) => (
+                  <span key={option.value} className="rounded-full bg-zinc-900 px-2 py-0.5 text-[11px] leading-4 text-white">
+                    {option.label}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="block truncate text-sm text-muted-foreground">{placeholder}</span>
+            )}
+          </span>
           <ChevronDownIcon className="mt-0.5 size-4 shrink-0 opacity-60" />
         </Button>
       </PopoverTrigger>
