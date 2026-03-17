@@ -135,7 +135,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
             onCheckedChange={(checked) => onChange(checked === true)}
             disabled={disabled}
           />
-          <span>{`${definition.label}${requiredMark}`}</span>
+          <span className="font-semibold">{`${definition.label}${requiredMark}`}</span>
         </label>
       )}
 
