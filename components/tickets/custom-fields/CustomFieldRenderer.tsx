@@ -45,22 +45,22 @@ function CustomFieldMultiSelect({ id, options, selectedValues, onChange, placeho
           id={id}
           type="button"
           variant="outline"
-          className="h-auto min-h-10 w-full items-start justify-between gap-2 py-2 text-left"
+          className="h-auto min-h-10 w-full items-start justify-between gap-2 whitespace-normal py-2 text-left"
           disabled={disabled}
         >
-          <span className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-hidden">
             {selectedOptions.length ? (
-              <span className="flex flex-wrap gap-1.5">
+              <div className="flex max-w-full flex-wrap gap-1.5 whitespace-normal">
                 {selectedOptions.map((option) => (
-                  <span key={option.value} className="rounded-full bg-zinc-900 px-2 py-0.5 text-[11px] leading-4 text-white">
+                  <span key={option.value} className="max-w-full rounded-full bg-zinc-900 px-2 py-0.5 text-[11px] leading-4 text-white break-words">
                     {option.label}
                   </span>
                 ))}
-              </span>
+              </div>
             ) : (
               <span className="block truncate text-sm text-muted-foreground">{placeholder}</span>
             )}
-          </span>
+          </div>
           <ChevronDownIcon className="mt-0.5 size-4 shrink-0 opacity-60" />
         </Button>
       </PopoverTrigger>
