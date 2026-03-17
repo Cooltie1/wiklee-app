@@ -58,10 +58,10 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
     <div className="space-y-2">
       <Label htmlFor={definition.id}>{`${definition.label}${requiredMark}`}</Label>
 
-      {(definition.field_type === "text" || definition.field_type === "datetime") && (
+      {definition.field_type === "text" && (
         <Input
           id={definition.id}
-          type={definition.field_type === "datetime" ? "datetime-local" : "text"}
+          type="text"
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}

@@ -577,7 +577,7 @@ export default function TicketDetailPage() {
             .order("created_at", { ascending: true }),
           supabase
             .from("ticket_field_values")
-            .select("ticket_id, field_definition_id, value_text, value_number, value_boolean, value_date, value_datetime, value_json")
+            .select("ticket_id, field_definition_id, value_text, value_number, value_boolean, value_date, value_json")
             .eq("ticket_id", ticketId),
         ]);
 

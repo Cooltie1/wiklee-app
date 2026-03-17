@@ -29,7 +29,7 @@ type FieldFormState = {
   placeholder: string;
 };
 
-const FIELD_TYPE_OPTIONS: TicketFieldType[] = ["text", "textarea", "select", "number", "boolean", "date", "datetime", "multi_select"];
+const FIELD_TYPE_OPTIONS: TicketFieldType[] = ["text", "textarea", "select", "number", "boolean", "date", "multi_select"];
 
 function toFieldFormState(field?: EditableField): FieldFormState {
   const options = Array.isArray(field?.config?.options)
