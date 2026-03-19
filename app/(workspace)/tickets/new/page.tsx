@@ -348,6 +348,7 @@ export default function NewTicketPage() {
           validationErrors={customFieldErrors}
           disabled={isSaving || isLoadingCustomFields}
           textFieldClassName="bg-white"
+          useNativeBooleanCheckbox
         />
 
         {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}

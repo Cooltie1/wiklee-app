@@ -24,6 +24,7 @@ type CustomFieldRendererProps = {
   disabled?: boolean;
   readOnly?: boolean;
   textFieldClassName?: string;
+  useNativeBooleanCheckbox?: boolean;
 };
 
 type CustomFieldMultiSelectProps = {
@@ -103,7 +104,16 @@ function parseDateValue(value: CustomFieldFormValue) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-export function CustomFieldRenderer({ definition, value, onChange, errorMessage, disabled, readOnly, textFieldClassName }: CustomFieldRendererProps) {
+export function CustomFieldRenderer({
+  definition,
+  value,
+  onChange,
+  errorMessage,
+  disabled,
+  readOnly,
+  textFieldClassName,
+  useNativeBooleanCheckbox,
+}: CustomFieldRendererProps) {
   const options = getOptionsFromConfig(definition.config);
   const requiredMark = definition.is_required ? " *" : "";
   const presentation = definition.config ?? {};
@@ -201,12 +211,23 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
 
       {definition.field_type === "boolean" && (
         <label htmlFor={definition.id} className="flex items-center gap-2 text-sm text-zinc-700">
-          <Checkbox
-            id={definition.id}
-            checked={value === true}
-            onCheckedChange={(checked) => onChange(checked === true)}
-            disabled={disabled}
-          />
+          {useNativeBooleanCheckbox ? (
+            <input
+              id={definition.id}
+              type="checkbox"
+              checked={value === true}
+              onChange={(event) => onChange(event.target.checked)}
+              disabled={disabled}
+              className="size-4 accent-black disabled:cursor-not-allowed"
+            />
+          ) : (
+            <Checkbox
+              id={definition.id}
+              checked={value === true}
+              onCheckedChange={(checked) => onChange(checked === true)}
+              disabled={disabled}
+            />
+          )}
           <span className="font-semibold">{`${definition.label}${requiredMark}`}</span>
         </label>
       )}

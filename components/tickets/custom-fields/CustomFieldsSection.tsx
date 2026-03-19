@@ -10,6 +10,7 @@ type CustomFieldsSectionProps = {
   readOnly?: boolean;
   title?: string;
   textFieldClassName?: string;
+  useNativeBooleanCheckbox?: boolean;
 };
 
 export function CustomFieldsSection({
@@ -21,6 +22,7 @@ export function CustomFieldsSection({
   readOnly,
   title = "Custom fields",
   textFieldClassName,
+  useNativeBooleanCheckbox,
 }: CustomFieldsSectionProps) {
   if (!definitions.length) {
     return null;
@@ -40,6 +42,7 @@ export function CustomFieldsSection({
             disabled={disabled}
             readOnly={readOnly}
             textFieldClassName={textFieldClassName}
+            useNativeBooleanCheckbox={useNativeBooleanCheckbox}
           />
         ))}
       </div>
