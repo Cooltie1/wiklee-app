@@ -238,7 +238,7 @@ export function CustomFieldRenderer({
           selectedId={typeof value === "string" ? value : null}
           onSelect={onChange}
           getItemLabel={(option) => option.label}
-          placeholder="Select an option"
+          placeholder={placeholder || "Select an option"}
           searchable={false}
           emptyText="No options configured"
           disabled={disabled}

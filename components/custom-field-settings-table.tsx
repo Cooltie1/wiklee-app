@@ -1,19 +1,19 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Ban, MoreHorizontal, Pencil, Plus, Power, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, MoreHorizontal, Pencil, Plus, Power, Trash2 } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { normalizeRole } from "@/lib/roles";
 import { supabase } from "@/lib/supabaseClient";
-import { type TicketFieldDefinition, type TicketFieldType } from "@/lib/ticketCustomFields";
+import { getOptionsFromConfig, type TicketFieldDefinition, type TicketFieldType } from "@/lib/ticketCustomFields";
 
 type EditableField = TicketFieldDefinition & {
   config: Record<string, unknown> | null;
@@ -21,13 +21,23 @@ type EditableField = TicketFieldDefinition & {
 
 type FieldFilter = "active" | "inactive";
 
+type FieldOptionFormState = {
+  id: string;
+  label: string;
+};
+
 type FieldFormState = {
   id: string | null;
   key: string;
   label: string;
   field_type: TicketFieldType;
-  optionsText: string;
+  is_required: boolean;
   placeholder: string;
+  options: FieldOptionFormState[];
+  defaultBooleanValue: boolean | null;
+  defaultSelectValue: string | null;
+  defaultMultiSelectValues: string[];
+  defaultDateToday: boolean;
 };
 
 type FieldTypeOption = {
@@ -45,6 +55,12 @@ const FIELD_TYPE_OPTIONS: FieldTypeOption[] = [
   { id: "multi_select", label: "Multi-select" },
 ];
 
+const BOOLEAN_DEFAULT_OPTIONS = [
+  { id: "none", label: "No default" },
+  { id: "selected", label: "Selected" },
+  { id: "deselected", label: "Deselected" },
+] as const;
+
 function getFieldTypeLabel(fieldType: TicketFieldType) {
   return FIELD_TYPE_OPTIONS.find((option) => option.id === fieldType)?.label ?? fieldType;
 }
@@ -60,51 +76,90 @@ function orderFields(fields: EditableField[]) {
   });
 }
 
+function createOptionId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function sanitizeOptionValue(label: string) {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 function toFieldFormState(field?: EditableField): FieldFormState {
-  const options = Array.isArray(field?.config?.options)
-    ? field.config.options
-        .map((option) => {
-          if (typeof option === "string") return option;
-          if (option && typeof option === "object" && typeof (option as { label?: unknown }).label === "string") {
-            return (option as { label: string }).label;
-          }
-          return "";
-        })
-        .filter(Boolean)
-        .join("\n")
-    : "";
+  const config = field?.config ?? {};
+  const options = getOptionsFromConfig(config).map((option) => ({
+    id: createOptionId(),
+    label: option.label,
+  }));
+  const defaultValue = config.defaultValue;
 
   return {
     id: field?.id ?? null,
     key: field?.key ?? "",
     label: field?.label ?? "",
     field_type: field?.field_type ?? "text",
-    optionsText: options,
-    placeholder: typeof field?.config?.placeholder === "string" ? field.config.placeholder : "",
+    is_required: field?.is_required ?? false,
+    placeholder: typeof config.placeholder === "string" ? config.placeholder : "",
+    options,
+    defaultBooleanValue: typeof defaultValue === "boolean" ? defaultValue : null,
+    defaultSelectValue: typeof defaultValue === "string" ? defaultValue : null,
+    defaultMultiSelectValues: Array.isArray(defaultValue)
+      ? defaultValue.filter((value): value is string => typeof value === "string")
+      : [],
+    defaultDateToday: config.defaultToday === true,
   };
 }
 
 function buildConfig(formState: FieldFormState) {
-  const config: Record<string, unknown> = {
-    placeholder: formState.placeholder.trim() || "",
-  };
+  const config: Record<string, unknown> = {};
+  const trimmedPlaceholder = formState.placeholder.trim();
+
+  if (["text", "textarea", "select", "date", "multi_select"].includes(formState.field_type) && trimmedPlaceholder) {
+    config.placeholder = trimmedPlaceholder;
+  }
 
   if (formState.field_type === "select" || formState.field_type === "multi_select") {
-    const optionLines = formState.optionsText
-      .split("\n")
-      .map((option) => option.trim())
-      .filter(Boolean);
+    const options = formState.options
+      .map((option) => option.label.trim())
+      .filter(Boolean)
+      .map((label) => ({
+        label,
+        value: sanitizeOptionValue(label),
+      }))
+      .filter((option) => option.value);
 
-    config.options = optionLines.map((label) => ({
-      label,
-      value: label
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, ""),
-    }));
+    config.options = options;
+
+    if (formState.field_type === "select") {
+      const defaultValue = typeof formState.defaultSelectValue === "string" ? formState.defaultSelectValue : null;
+      if (defaultValue && options.some((option) => option.value === defaultValue)) {
+        config.defaultValue = defaultValue;
+      }
+    }
+
+    if (formState.field_type === "multi_select") {
+      const validDefaultValues = formState.defaultMultiSelectValues.filter((value) => options.some((option) => option.value === value));
+      if (validDefaultValues.length) {
+        config.defaultValue = validDefaultValues;
+      }
+    }
+  }
+
+  if (formState.field_type === "boolean" && formState.defaultBooleanValue !== null) {
+    config.defaultValue = formState.defaultBooleanValue;
+  }
+
+  if (formState.field_type === "date" && formState.defaultDateToday) {
+    config.defaultToday = true;
   }
 
   return config;
+}
+
+function usesPlaceholder(fieldType: TicketFieldType) {
+  return fieldType === "text" || fieldType === "textarea" || fieldType === "select" || fieldType === "multi_select" || fieldType === "date";
 }
 
 export function CustomFieldSettingsTable() {
@@ -190,6 +245,27 @@ export function CustomFieldSettingsTable() {
     [fields, selectedFilter]
   );
 
+  const selectableOptions = useMemo(
+    () =>
+      formState.options
+        .map((option) => {
+          const trimmedLabel = option.label.trim();
+          const value = sanitizeOptionValue(trimmedLabel);
+
+          if (!trimmedLabel || !value) {
+            return null;
+          }
+
+          return {
+            id: value,
+            label: trimmedLabel,
+            optionId: option.id,
+          };
+        })
+        .filter((option): option is { id: string; label: string; optionId: string } => option !== null),
+    [formState.options]
+  );
+
   const isEmpty = useMemo(() => !isLoading && !errorMessage && visibleFields.length === 0, [errorMessage, isLoading, visibleFields.length]);
 
   const filterButtonClassName = (isSelected: boolean) =>
@@ -213,6 +289,112 @@ export function CustomFieldSettingsTable() {
     setIsDialogOpen(true);
   };
 
+  const updateOption = (optionId: string, label: string) => {
+    setFormState((current) => {
+      const nextOptions = current.options.map((option) => (option.id === optionId ? { ...option, label } : option));
+      const nextSelectableOptions = nextOptions
+        .map((option) => {
+          const trimmedLabel = option.label.trim();
+          const value = sanitizeOptionValue(trimmedLabel);
+          return trimmedLabel && value ? value : null;
+        })
+        .filter((value): value is string => Boolean(value));
+
+      return {
+        ...current,
+        options: nextOptions,
+        defaultSelectValue: current.defaultSelectValue && nextSelectableOptions.includes(current.defaultSelectValue) ? current.defaultSelectValue : null,
+        defaultMultiSelectValues: current.defaultMultiSelectValues.filter((value) => nextSelectableOptions.includes(value)),
+      };
+    });
+  };
+
+  const addOption = () => {
+    setFormState((current) => ({
+      ...current,
+      options: [...current.options, { id: createOptionId(), label: "" }],
+    }));
+  };
+
+  const removeOption = (optionId: string) => {
+    setFormState((current) => {
+      const nextOptions = current.options.filter((option) => option.id !== optionId);
+      const removedOption = current.options.find((option) => option.id === optionId);
+      const removedValue = removedOption ? sanitizeOptionValue(removedOption.label.trim()) : null;
+
+      return {
+        ...current,
+        options: nextOptions,
+        defaultSelectValue: removedValue && current.defaultSelectValue === removedValue ? null : current.defaultSelectValue,
+        defaultMultiSelectValues: removedValue
+          ? current.defaultMultiSelectValues.filter((value) => value !== removedValue)
+          : current.defaultMultiSelectValues,
+      };
+    });
+  };
+
+  const moveOption = (index: number, direction: -1 | 1) => {
+    setFormState((current) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= current.options.length) {
+        return current;
+      }
+
+      const nextOptions = [...current.options];
+      const [movedOption] = nextOptions.splice(index, 1);
+      nextOptions.splice(nextIndex, 0, movedOption);
+
+      return {
+        ...current,
+        options: nextOptions,
+      };
+    });
+  };
+
+  const alphabetizeOptions = () => {
+    setFormState((current) => ({
+      ...current,
+      options: [...current.options].sort((a, b) => a.label.localeCompare(b.label)),
+    }));
+  };
+
+  const handleFieldTypeChange = (fieldType: TicketFieldType) => {
+    setFormState((current) => {
+      const nextState: FieldFormState = {
+        ...current,
+        field_type: fieldType,
+      };
+
+      if (!usesPlaceholder(fieldType)) {
+        nextState.placeholder = "";
+      }
+
+      if (fieldType !== "select") {
+        nextState.defaultSelectValue = null;
+      }
+
+      if (fieldType !== "multi_select") {
+        nextState.defaultMultiSelectValues = [];
+      }
+
+      if (fieldType !== "boolean") {
+        nextState.defaultBooleanValue = null;
+      }
+
+      if (fieldType !== "date") {
+        nextState.defaultDateToday = false;
+      }
+
+      if (fieldType !== "select" && fieldType !== "multi_select") {
+        nextState.options = [];
+      } else if (current.options.length === 0) {
+        nextState.options = [{ id: createOptionId(), label: "" }];
+      }
+
+      return nextState;
+    });
+  };
+
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -231,10 +413,15 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
+    if ((formState.field_type === "select" || formState.field_type === "multi_select") && selectableOptions.length === 0) {
+      setDialogErrorMessage("Add at least one option for select fields.");
+      return;
+    }
+
     const basePayload = {
       org_id: orgId,
       label: formState.label.trim(),
-      is_required: false,
+      is_required: formState.is_required,
       is_active: true,
       config: buildConfig(formState),
     };
@@ -551,13 +738,13 @@ export function CustomFieldSettingsTable() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit custom field" : "Create custom field"}</DialogTitle>
             <DialogDescription>Configure how this field should appear and be stored on tickets.</DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-3" onSubmit={handleSave}>
+          <form className="space-y-4" onSubmit={handleSave}>
             {dialogErrorMessage ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{dialogErrorMessage}</p> : null}
 
             <div className="space-y-1">
@@ -617,10 +804,7 @@ export function CustomFieldSettingsTable() {
                       return;
                     }
 
-                    setFormState((current) => ({
-                      ...current,
-                      field_type: selectedId as TicketFieldType,
-                    }));
+                    handleFieldTypeChange(selectedId as TicketFieldType);
                   }}
                   getItemLabel={(type) => type.label}
                   placeholder="Select field type"
@@ -632,26 +816,203 @@ export function CustomFieldSettingsTable() {
               {isEditing ? <p className="text-xs text-muted-foreground">Field type cannot be changed after the field is created.</p> : null}
             </div>
 
-            {(formState.field_type === "select" || formState.field_type === "multi_select") && (
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="custom-field-required"
+                  checked={formState.is_required}
+                  onCheckedChange={(checked) => {
+                    setFormState((current) => ({
+                      ...current,
+                      is_required: checked === true,
+                    }));
+                  }}
+                />
+                <Label htmlFor="custom-field-required">Required field</Label>
+              </div>
+            </div>
+
+            {usesPlaceholder(formState.field_type) ? (
               <div className="space-y-1">
-                <Label htmlFor="custom-field-options">Options (one per line)</Label>
-                <Textarea
-                  id="custom-field-options"
-                  value={formState.optionsText}
-                  onChange={(event) => setFormState((current) => ({ ...current, optionsText: event.target.value }))}
-                  rows={5}
+                <Label htmlFor="custom-field-placeholder">Placeholder</Label>
+                <Input
+                  id="custom-field-placeholder"
+                  value={formState.placeholder}
+                  onChange={(event) => setFormState((current) => ({ ...current, placeholder: event.target.value }))}
                 />
               </div>
-            )}
+            ) : null}
 
-            <div className="space-y-1">
-              <Label htmlFor="custom-field-placeholder">Placeholder (optional)</Label>
-              <Input
-                id="custom-field-placeholder"
-                value={formState.placeholder}
-                onChange={(event) => setFormState((current) => ({ ...current, placeholder: event.target.value }))}
-              />
-            </div>
+            {formState.field_type === "boolean" ? (
+              <div className="space-y-1">
+                <Label htmlFor="custom-field-default-boolean">Default value</Label>
+                <div id="custom-field-default-boolean">
+                  <LookupDropdown
+                    items={BOOLEAN_DEFAULT_OPTIONS.map((option) => ({ id: option.id, label: option.label }))}
+                    selectedId={
+                      formState.defaultBooleanValue === null
+                        ? "none"
+                        : formState.defaultBooleanValue
+                          ? "selected"
+                          : "deselected"
+                    }
+                    onSelect={(selectedId) => {
+                      if (selectedId === "selected") {
+                        setFormState((current) => ({ ...current, defaultBooleanValue: true }));
+                        return;
+                      }
+
+                      if (selectedId === "deselected") {
+                        setFormState((current) => ({ ...current, defaultBooleanValue: false }));
+                        return;
+                      }
+
+                      setFormState((current) => ({ ...current, defaultBooleanValue: null }));
+                    }}
+                    getItemLabel={(option) => option.label}
+                    placeholder="Select default"
+                    searchable={false}
+                    emptyText="No defaults found"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {(formState.field_type === "select" || formState.field_type === "multi_select") ? (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-medium">Values</h3>
+                    <p className="text-xs text-muted-foreground">Add, reorder, and clean up the selectable values for this field.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={alphabetizeOptions} disabled={formState.options.length < 2}>
+                      Alphabetize
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" onClick={addOption} aria-label="Add option">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {formState.options.map((option, index) => (
+                    <div key={option.id} className="flex items-center gap-2">
+                      <Input
+                        value={option.label}
+                        onChange={(event) => updateOption(option.id, event.target.value)}
+                        placeholder={`Option ${index + 1}`}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => moveOption(index, -1)}
+                        disabled={index === 0}
+                        aria-label={`Move option ${index + 1} up`}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => moveOption(index, 1)}
+                        disabled={index === formState.options.length - 1}
+                        aria-label={`Move option ${index + 1} down`}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="text-red-600 hover:text-red-600"
+                        onClick={() => removeOption(option.id)}
+                        disabled={formState.options.length === 1}
+                        aria-label={`Remove option ${index + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {formState.field_type === "select" ? (
+                  <div className="space-y-1">
+                    <Label htmlFor="custom-field-default-select">Default</Label>
+                    <div id="custom-field-default-select">
+                      <LookupDropdown
+                        items={[{ id: "", label: "No default" }, ...selectableOptions]}
+                        selectedId={formState.defaultSelectValue ?? ""}
+                        onSelect={(selectedId) => {
+                          setFormState((current) => ({
+                            ...current,
+                            defaultSelectValue: selectedId || null,
+                          }));
+                        }}
+                        getItemLabel={(option) => option.label}
+                        placeholder="Select default"
+                        searchable={false}
+                        emptyText="No values configured"
+                        disabled={selectableOptions.length === 0}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {formState.field_type === "multi_select" ? (
+                  <div className="space-y-2">
+                    <Label>Default</Label>
+                    {selectableOptions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Add values before choosing defaults.</p>
+                    ) : (
+                      <div className="space-y-2 rounded-md border p-3">
+                        {selectableOptions.map((option) => {
+                          const isSelected = formState.defaultMultiSelectValues.includes(option.id);
+
+                          return (
+                            <label key={option.optionId} className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(checked) => {
+                                  setFormState((current) => ({
+                                    ...current,
+                                    defaultMultiSelectValues:
+                                      checked === true
+                                        ? [...current.defaultMultiSelectValues, option.id]
+                                        : current.defaultMultiSelectValues.filter((value) => value !== option.id),
+                                  }));
+                                }}
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {formState.field_type === "date" ? (
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="custom-field-date-default-today"
+                    checked={formState.defaultDateToday}
+                    onCheckedChange={(checked) => {
+                      setFormState((current) => ({
+                        ...current,
+                        defaultDateToday: checked === true,
+                      }));
+                    }}
+                  />
+                  <Label htmlFor="custom-field-date-default-today">Default to today</Label>
+                </div>
+              </div>
+            ) : null}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
