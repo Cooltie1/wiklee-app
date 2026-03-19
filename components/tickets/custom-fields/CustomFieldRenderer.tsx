@@ -206,6 +206,7 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
             checked={value === true}
             onCheckedChange={(checked) => onChange(checked === true)}
             disabled={disabled}
+            className="mt-0.5"
           />
           <span className="font-semibold">{`${definition.label}${requiredMark}`}</span>
         </label>
