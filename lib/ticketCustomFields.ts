@@ -70,9 +70,44 @@ export function getOptionsFromConfig(config: Record<string, unknown> | null): Ti
     .filter((option): option is TicketFieldOption => option !== null);
 }
 
+function getTodayDateValue() {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 10);
+}
+
+export function getDefaultFormValue(definition: TicketFieldDefinition): CustomFieldFormValue {
+  const config = definition.config ?? {};
+
+  switch (definition.field_type) {
+    case "boolean":
+      return typeof config.default_boolean === "boolean" ? config.default_boolean : null;
+    case "date":
+      return config.default_today === true ? getTodayDateValue() : null;
+    case "select": {
+      const defaultValue = typeof config.default_value === "string" ? config.default_value : null;
+      if (!defaultValue) {
+        return null;
+      }
+
+      const options = getOptionsFromConfig(definition.config);
+      return options.some((option) => option.value === defaultValue) ? defaultValue : null;
+    }
+    case "multi_select": {
+      const defaultValues = Array.isArray(config.default_values)
+        ? config.default_values.filter((value): value is string => typeof value === "string")
+        : [];
+      const options = new Set(getOptionsFromConfig(definition.config).map((option) => option.value));
+      return defaultValues.filter((value) => options.has(value));
+    }
+    default:
+      return null;
+  }
+}
+
 export function getFormValueFromRow(definition: TicketFieldDefinition, row: TicketFieldValueRow | undefined): CustomFieldFormValue {
   if (!row) {
-    return definition.field_type === "multi_select" ? [] : null;
+    return getDefaultFormValue(definition);
   }
 
   switch (definition.field_type) {

@@ -865,7 +865,6 @@ export function CustomFieldSettingsTable() {
                   <th className="py-3 font-medium">Label</th>
                   <th className="py-3 font-medium">Key</th>
                   <th className="py-3 font-medium">Type</th>
-                  <th className="py-3 font-medium">Placeholder</th>
                   <th className="w-16 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
@@ -875,11 +874,6 @@ export function CustomFieldSettingsTable() {
                     <td className="py-4 font-medium">{field.label}</td>
                     <td className="py-4 text-sm text-muted-foreground">{field.key}</td>
                     <td className="py-4">{getFieldTypeLabel(field.field_type)}</td>
-                    <td className="py-4 text-sm text-muted-foreground">
-                      {typeof field.config?.placeholder === "string" && field.config.placeholder.trim()
-                        ? field.config.placeholder
-                        : "—"}
-                    </td>
                     <td className="py-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild disabled={!canEditSettings}>
