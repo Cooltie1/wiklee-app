@@ -120,6 +120,7 @@ export function CustomFieldSettingsTable() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formState, setFormState] = useState<FieldFormState>(toFieldFormState());
+  const [hasManuallyEditedKey, setHasManuallyEditedKey] = useState(false);
   const [fieldPendingDeactivation, setFieldPendingDeactivation] = useState<EditableField | null>(null);
   const [fieldPendingDeletion, setFieldPendingDeletion] = useState<EditableField | null>(null);
   const [isSubmittingDeactivate, setIsSubmittingDeactivate] = useState(false);
@@ -200,12 +201,14 @@ export function CustomFieldSettingsTable() {
 
   const openCreateDialog = () => {
     setFormState(toFieldFormState());
+    setHasManuallyEditedKey(false);
     setDialogErrorMessage("");
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (field: EditableField) => {
     setFormState(toFieldFormState(field));
+    setHasManuallyEditedKey(true);
     setDialogErrorMessage("");
     setIsDialogOpen(true);
   };
@@ -568,7 +571,7 @@ export function CustomFieldSettingsTable() {
                     ...current,
                     label: nextLabel,
                     key:
-                      current.id || current.key
+                      current.id || hasManuallyEditedKey
                         ? current.key
                         : nextLabel
                             .toLowerCase()
@@ -586,15 +589,16 @@ export function CustomFieldSettingsTable() {
               <Input
                 id="custom-field-key"
                 value={formState.key}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setHasManuallyEditedKey(true);
                   setFormState((current) => ({
                     ...current,
                     key: event.target.value
                       .toLowerCase()
                       .replace(/[^a-z0-9_]+/g, "_")
                       .replace(/^_+|_+$/g, ""),
-                  }))
-                }
+                  }));
+                }}
                 placeholder="affected_service"
                 required
                 disabled={isEditing}
