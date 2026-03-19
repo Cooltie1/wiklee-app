@@ -1,5 +1,5 @@
 import { format, parse } from "date-fns";
-import { CalendarIcon, ChevronDownIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
@@ -65,28 +65,30 @@ function CustomFieldMultiSelect({ id, options, selectedValues, onChange, placeho
           <ChevronDownIcon className="mt-0.5 size-4 shrink-0 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-3" align="start">
-        <div className="space-y-2">
-          {options.length === 0 ? <p className="text-xs text-zinc-500">No options configured.</p> : null}
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-1" align="start">
+        <div className="space-y-1">
+          {options.length === 0 ? <p className="px-2 py-1 text-xs text-zinc-500">No options configured.</p> : null}
           {options.map((option) => {
             const isSelected = selectedValues.includes(option.value);
 
             return (
-              <label key={option.value} className="flex items-center gap-2 text-sm text-zinc-700">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={(checked) => {
-                    if (checked === true) {
-                      onChange([...selectedValues, option.value]);
-                      return;
-                    }
-
+              <button
+                key={option.value}
+                type="button"
+                className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-zinc-700 outline-hidden transition-colors select-none disabled:pointer-events-none disabled:opacity-50"
+                onClick={() => {
+                  if (isSelected) {
                     onChange(selectedValues.filter((selectedValue) => selectedValue !== option.value));
-                  }}
-                  disabled={disabled}
-                />
-                <span>{option.label}</span>
-              </label>
+                    return;
+                  }
+
+                  onChange([...selectedValues, option.value]);
+                }}
+                disabled={disabled}
+              >
+                <CheckIcon className={`size-4 shrink-0 ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                <span className="flex-1">{option.label}</span>
+              </button>
             );
           })}
         </div>
