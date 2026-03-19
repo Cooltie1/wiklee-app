@@ -173,7 +173,7 @@ function toFieldFormState(field?: EditableField): FieldFormState {
 function buildConfig(formState: FieldFormState) {
   const config: Record<string, unknown> = {};
 
-  if (["text", "textarea", "select", "multi_select", "date"].includes(formState.field_type)) {
+  if (["text", "textarea", "number", "select", "multi_select", "date"].includes(formState.field_type)) {
     config.placeholder = formState.placeholder.trim() || "";
   }
 
@@ -676,7 +676,7 @@ export function CustomFieldSettingsTable() {
   };
 
   const typeSpecificConfig = (() => {
-    if (formState.field_type === "text" || formState.field_type === "textarea") {
+    if (formState.field_type === "text" || formState.field_type === "textarea" || formState.field_type === "number") {
       return (
         <div className="space-y-1">
           <Label htmlFor="custom-field-placeholder">Placeholder</Label>
@@ -684,7 +684,9 @@ export function CustomFieldSettingsTable() {
             id="custom-field-placeholder"
             value={formState.placeholder}
             onChange={(event) => setFormState((current) => ({ ...current, placeholder: event.target.value }))}
-            placeholder={formState.field_type === "textarea" ? "Add more detail" : "Type a value"}
+            placeholder={
+              formState.field_type === "textarea" ? "Add more detail" : formState.field_type === "number" ? "Enter a number" : "Type a value"
+            }
           />
         </div>
       );
