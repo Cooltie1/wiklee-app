@@ -1,11 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Power } from "lucide-react";
+import { Ban, MoreHorizontal, Pencil, Plus, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,23 +18,33 @@ type EditableField = TicketFieldDefinition & {
   config: Record<string, unknown> | null;
 };
 
+type FieldFilter = "active" | "inactive";
+
 type FieldFormState = {
   id: string | null;
   key: string;
   label: string;
   field_type: TicketFieldType;
-  is_required: boolean;
-  is_active: boolean;
-  sort_order: number;
   optionsText: string;
   placeholder: string;
 };
 
 const FIELD_TYPE_OPTIONS: TicketFieldType[] = ["text", "textarea", "select", "number", "boolean", "date", "multi_select"];
 
+function orderFields(fields: EditableField[]) {
+  return [...fields].sort((a, b) => {
+    const labelDiff = a.label.localeCompare(b.label);
+    if (labelDiff !== 0) {
+      return labelDiff;
+    }
+
+    return a.key.localeCompare(b.key);
+  });
+}
+
 function toFieldFormState(field?: EditableField): FieldFormState {
   const options = Array.isArray(field?.config?.options)
-    ? field?.config?.options
+    ? field.config.options
         .map((option) => {
           if (typeof option === "string") return option;
           if (option && typeof option === "object" && typeof (option as { label?: unknown }).label === "string") {
@@ -50,9 +61,6 @@ function toFieldFormState(field?: EditableField): FieldFormState {
     key: field?.key ?? "",
     label: field?.label ?? "",
     field_type: field?.field_type ?? "text",
-    is_required: field?.is_required ?? false,
-    is_active: field?.is_active ?? true,
-    sort_order: field?.sort_order ?? 1,
     optionsText: options,
     placeholder: typeof field?.config?.placeholder === "string" ? field.config.placeholder : "",
   };
@@ -90,9 +98,15 @@ export function CustomFieldSettingsTable() {
   const [errorMessage, setErrorMessage] = useState("");
   const [orgId, setOrgId] = useState<string | null>(null);
   const [canEditSettings, setCanEditSettings] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<FieldFilter>("active");
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formState, setFormState] = useState<FieldFormState>(toFieldFormState());
+  const [fieldPendingDeactivation, setFieldPendingDeactivation] = useState<EditableField | null>(null);
+  const [fieldPendingDeletion, setFieldPendingDeletion] = useState<EditableField | null>(null);
+  const [isSubmittingDeactivate, setIsSubmittingDeactivate] = useState(false);
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -128,7 +142,6 @@ export function CustomFieldSettingsTable() {
         .from("ticket_field_definitions")
         .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
         .eq("org_id", profile.org_id)
-        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
 
       if (!isMounted) return;
@@ -141,7 +154,7 @@ export function CustomFieldSettingsTable() {
 
       setOrgId(profile.org_id);
       setCanEditSettings(normalizeRole(profile.role) === "admin");
-      setFields((data ?? []) as EditableField[]);
+      setFields(orderFields((data ?? []) as EditableField[]));
       setIsLoading(false);
     }
 
@@ -154,24 +167,29 @@ export function CustomFieldSettingsTable() {
 
   const isEditing = formState.id !== null;
 
-  const sortedFields = useMemo(
-    () =>
-      [...fields].sort((a, b) => {
-        const orderDiff = (a.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.sort_order ?? Number.MAX_SAFE_INTEGER);
-        if (orderDiff !== 0) return orderDiff;
-        return a.label.localeCompare(b.label);
-      }),
-    [fields]
+  const visibleFields = useMemo(
+    () => fields.filter((field) => (selectedFilter === "active" ? field.is_active : !field.is_active)),
+    [fields, selectedFilter]
   );
 
+  const isEmpty = useMemo(() => !isLoading && !errorMessage && visibleFields.length === 0, [errorMessage, isLoading, visibleFields.length]);
+
+  const filterButtonClassName = (isSelected: boolean) =>
+    `rounded-full border shadow-xs ${
+      isSelected
+        ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+    }`;
+
   const openCreateDialog = () => {
-    const maxSort = Math.max(0, ...fields.map((field) => field.sort_order ?? 0));
-    setFormState({ ...toFieldFormState(), sort_order: maxSort + 1 });
+    setFormState(toFieldFormState());
+    setErrorMessage("");
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (field: EditableField) => {
     setFormState(toFieldFormState(field));
+    setErrorMessage("");
     setIsDialogOpen(true);
   };
 
@@ -198,9 +216,8 @@ export function CustomFieldSettingsTable() {
       key: formState.key.trim().toLowerCase(),
       label: formState.label.trim(),
       field_type: formState.field_type,
-      is_required: formState.is_required,
-      is_active: formState.is_active,
-      sort_order: formState.sort_order,
+      is_required: false,
+      is_active: true,
       config: buildConfig(formState),
     };
 
@@ -223,7 +240,9 @@ export function CustomFieldSettingsTable() {
         return;
       }
 
-      setFields((current) => current.map((field) => (field.id === data.id ? (data as EditableField) : field)));
+      setFields((current) =>
+        orderFields(current.map((field) => (field.id === data.id ? (data as EditableField) : field)))
+      );
       setIsDialogOpen(false);
       return;
     }
@@ -241,11 +260,11 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
-    setFields((current) => [...current, data as EditableField]);
+    setFields((current) => orderFields([...current, data as EditableField]));
     setIsDialogOpen(false);
   };
 
-  const handleToggleActive = async (field: EditableField) => {
+  const handleActivate = async (fieldId: string) => {
     if (!canEditSettings) {
       setErrorMessage("This section is read-only for agents.");
       return;
@@ -256,28 +275,138 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
-    const nextActive = !field.is_active;
+    setStatusUpdatingId(fieldId);
+    setErrorMessage("");
 
     const { error } = await supabase
       .from("ticket_field_definitions")
-      .update({ is_active: nextActive })
-      .eq("id", field.id)
+      .update({ is_active: true })
+      .eq("id", fieldId)
       .eq("org_id", orgId);
 
     if (error) {
-      setErrorMessage(error.message || "Unable to update field status");
+      setErrorMessage(error.message || "Unable to activate field");
+      setStatusUpdatingId(null);
       return;
     }
 
-    setFields((current) => current.map((existing) => (existing.id === field.id ? { ...existing, is_active: nextActive } : existing)));
+    setFields((current) =>
+      orderFields(
+        current.map((field) =>
+          field.id === fieldId
+            ? {
+                ...field,
+                is_active: true,
+              }
+            : field
+        )
+      )
+    );
+    setStatusUpdatingId(null);
+  };
+
+  const handleDeactivate = async () => {
+    if (!fieldPendingDeactivation) {
+      return;
+    }
+
+    setIsSubmittingDeactivate(true);
+    setErrorMessage("");
+
+    const { error } = await supabase
+      .from("ticket_field_definitions")
+      .update({ is_active: false })
+      .eq("id", fieldPendingDeactivation.id)
+      .eq("org_id", fieldPendingDeactivation.org_id);
+
+    setIsSubmittingDeactivate(false);
+
+    if (error) {
+      setErrorMessage(error.message || "Unable to deactivate field");
+      return;
+    }
+
+    setFields((current) =>
+      orderFields(
+        current.map((field) =>
+          field.id === fieldPendingDeactivation.id
+            ? {
+                ...field,
+                is_active: false,
+              }
+            : field
+        )
+      )
+    );
+    setFieldPendingDeactivation(null);
+  };
+
+  const handleDelete = async () => {
+    if (!fieldPendingDeletion || !orgId) {
+      setErrorMessage("Unable to determine your organization");
+      return;
+    }
+
+    setIsSubmittingDelete(true);
+    setErrorMessage("");
+
+    const { error: valueDeleteError } = await supabase
+      .from("ticket_field_values")
+      .delete()
+      .eq("field_definition_id", fieldPendingDeletion.id);
+
+    if (valueDeleteError) {
+      setErrorMessage(valueDeleteError.message || "Unable to remove custom field values");
+      setIsSubmittingDelete(false);
+      return;
+    }
+
+    const { error: fieldDeleteError } = await supabase
+      .from("ticket_field_definitions")
+      .delete()
+      .eq("id", fieldPendingDeletion.id)
+      .eq("org_id", orgId);
+
+    setIsSubmittingDelete(false);
+
+    if (fieldDeleteError) {
+      setErrorMessage(fieldDeleteError.message || "Unable to delete custom field");
+      return;
+    }
+
+    setFields((current) => current.filter((field) => field.id !== fieldPendingDeletion.id));
+    setFieldPendingDeletion(null);
   };
 
   return (
     <section className="grid gap-4">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Custom Fields</h1>
-        <p className="text-sm text-muted-foreground">Create and edit ticket custom fields for your organization.</p>
+        <p className="text-sm text-muted-foreground">Create and manage ticket custom fields for your organization.</p>
       </header>
+
+      <div className="flex items-center gap-2" role="radiogroup" aria-label="Filter custom fields by status">
+        <Button
+          type="button"
+          onClick={() => setSelectedFilter("active")}
+          variant="outline"
+          className={filterButtonClassName(selectedFilter === "active")}
+          role="radio"
+          aria-checked={selectedFilter === "active"}
+        >
+          Active
+        </Button>
+        <Button
+          type="button"
+          onClick={() => setSelectedFilter("inactive")}
+          variant="outline"
+          className={filterButtonClassName(selectedFilter === "inactive")}
+          role="radio"
+          aria-checked={selectedFilter === "inactive"}
+        >
+          Inactive
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -285,56 +414,113 @@ export function CustomFieldSettingsTable() {
             <CardTitle>Ticket custom fields</CardTitle>
             <CardDescription>Fields here appear on ticket creation and ticket details.</CardDescription>
           </div>
-          <Button onClick={openCreateDialog} disabled={!canEditSettings}>
+          <Button type="button" onClick={openCreateDialog} disabled={!canEditSettings}>
             <Plus className="mr-1 h-4 w-4" />
             Create field
           </Button>
         </CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-muted-foreground">Loading custom fields...</p> : null}
-          {!isLoading && sortedFields.length === 0 ? <p className="text-sm text-muted-foreground">No custom fields yet.</p> : null}
+          {errorMessage ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p> : null}
 
-          {!isLoading && sortedFields.length > 0 ? (
+          {isLoading ? <p className="text-sm text-muted-foreground">Loading custom fields...</p> : null}
+          {isEmpty ? (
+            <p className="text-sm text-muted-foreground">
+              {selectedFilter === "active" ? "No active custom fields found." : "No inactive custom fields found."}
+            </p>
+          ) : null}
+
+          {!isLoading && !isEmpty ? (
             <table className="w-full table-fixed text-left">
               <thead>
                 <tr className="border-b text-muted-foreground">
                   <th className="py-3 font-medium">Label</th>
                   <th className="py-3 font-medium">Key</th>
                   <th className="py-3 font-medium">Type</th>
-                  <th className="py-3 font-medium">Required</th>
-                  <th className="py-3 font-medium">Status</th>
-                  <th className="py-3 text-right font-medium">Actions</th>
+                  <th className="py-3 font-medium">Placeholder</th>
+                  <th className="w-16 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedFields.map((field) => (
+                {visibleFields.map((field) => (
                   <tr key={field.id} className="border-b last:border-0">
-                    <td className="py-3 font-medium">{field.label}</td>
-                    <td className="py-3 text-sm text-muted-foreground">{field.key}</td>
-                    <td className="py-3">{field.field_type}</td>
-                    <td className="py-3">{field.is_required ? "Yes" : "No"}</td>
-                    <td className="py-3">{field.is_active ? "Active" : "Inactive"}</td>
-                    <td className="py-3 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(field)} disabled={!canEditSettings}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => void handleToggleActive(field)} disabled={!canEditSettings}>
-                          <Power className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <td className="py-4 font-medium">{field.label}</td>
+                    <td className="py-4 text-sm text-muted-foreground">{field.key}</td>
+                    <td className="py-4">{field.field_type}</td>
+                    <td className="py-4 text-sm text-muted-foreground">
+                      {typeof field.config?.placeholder === "string" && field.config.placeholder.trim()
+                        ? field.config.placeholder
+                        : "—"}
+                    </td>
+                    <td className="py-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={!canEditSettings}>
+                          <Button variant="ghost" size="icon" aria-label={`Open actions for ${field.label}`}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              openEditDialog(field);
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                            Edit
+                          </DropdownMenuItem>
+                          {field.is_active ? (
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onSelect={() => {
+                                setFieldPendingDeactivation(field);
+                              }}
+                            >
+                              <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          ) : (
+                            <>
+                              <DropdownMenuItem
+                                className="text-emerald-700 focus:text-emerald-700"
+                                disabled={statusUpdatingId === field.id}
+                                onSelect={() => {
+                                  void handleActivate(field.id);
+                                }}
+                              >
+                                <Power className="mr-2 h-4 w-4" aria-hidden="true" />
+                                {statusUpdatingId === field.id ? "Activating..." : "Activate"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onSelect={() => {
+                                  setFieldPendingDeletion(field);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : null}
-
-          {errorMessage ? <p className="mt-3 text-sm text-red-600">{errorMessage}</p> : null}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (isSaving) {
+            return;
+          }
+
+          setIsDialogOpen(nextOpen);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit custom field" : "Create custom field"}</DialogTitle>
@@ -427,41 +613,76 @@ export function CustomFieldSettingsTable() {
               />
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="custom-field-order">Sort order</Label>
-              <Input
-                id="custom-field-order"
-                type="number"
-                min={1}
-                value={formState.sort_order}
-                onChange={(event) => setFormState((current) => ({ ...current, sort_order: Number(event.target.value) || 1 }))}
-              />
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={formState.is_required}
-                onChange={(event) => setFormState((current) => ({ ...current, is_required: event.target.checked }))}
-              />
-              Required field
-            </label>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={formState.is_active}
-                onChange={(event) => setFormState((current) => ({ ...current, is_active: event.target.checked }))}
-              />
-              Active field
-            </label>
-
             <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? "Saving..." : isEditing ? "Save field" : "Create field"}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={fieldPendingDeactivation !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !isSubmittingDeactivate) {
+            setFieldPendingDeactivation(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate Custom Field</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to deactivate <span className="font-medium text-foreground">{fieldPendingDeactivation?.label}</span>? It
+              will no longer appear when creating or updating tickets.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setFieldPendingDeactivation(null)}
+              disabled={isSubmittingDeactivate}
+            >
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void handleDeactivate()} disabled={isSubmittingDeactivate}>
+              {isSubmittingDeactivate ? "Deactivating..." : "Deactivate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={fieldPendingDeletion !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !isSubmittingDelete) {
+            setFieldPendingDeletion(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Custom Field</DialogTitle>
+            <DialogDescription>
+              Deleting <span className="font-medium text-foreground">{fieldPendingDeletion?.label}</span> will permanently remove the field and
+              any saved values that tickets currently have for it. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setFieldPendingDeletion(null)} disabled={isSubmittingDelete}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void handleDelete()} disabled={isSubmittingDelete}>
+              {isSubmittingDelete ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </section>
