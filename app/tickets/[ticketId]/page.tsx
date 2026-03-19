@@ -22,6 +22,7 @@ import {
   type CustomFieldFormValue,
   getFormValueFromRow,
   isCustomFieldMissingValue,
+  sortTicketFieldDefinitions,
   type TicketFieldDefinition,
   type TicketFieldValueRow,
 } from "@/lib/ticketCustomFields";
@@ -570,11 +571,9 @@ export default function TicketDetailPage() {
         const [{ data: definitionData, error: definitionError }, { data: fieldValueData, error: fieldValueError }] = await Promise.all([
           supabase
             .from("ticket_field_definitions")
-            .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+            .select("id, org_id, key, label, field_type, is_active, config, created_at")
             .eq("org_id", currentUserProfile.org_id)
-            .eq("is_active", true)
-            .order("sort_order", { ascending: true })
-            .order("created_at", { ascending: true }),
+            .eq("is_active", true),
           supabase
             .from("ticket_field_values")
             .select("ticket_id, field_definition_id, value_text, value_number, value_boolean, value_date, value_json")
@@ -582,7 +581,7 @@ export default function TicketDetailPage() {
         ]);
 
         if (!definitionError && !fieldValueError) {
-          const loadedDefinitions = (definitionData ?? []) as TicketFieldDefinition[];
+          const loadedDefinitions = sortTicketFieldDefinitions((definitionData ?? []) as TicketFieldDefinition[]);
           const valueByDefinitionId = new Map(
             ((fieldValueData ?? []) as TicketFieldValueRow[]).map((row) => [row.field_definition_id, row])
           );

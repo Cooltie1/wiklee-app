@@ -115,7 +115,8 @@ export function CustomFieldRenderer({
   useNativeBooleanCheckbox,
 }: CustomFieldRendererProps) {
   const options = getOptionsFromConfig(definition.config);
-  const requiredMark = definition.is_required ? " *" : "";
+  const isRequired = definition.is_required ?? false;
+  const requiredMark = isRequired ? " *" : "";
   const presentation = definition.config ?? {};
   const placeholder = typeof presentation.placeholder === "string" ? presentation.placeholder : "";
   const selectedDate = parseDateValue(value);
@@ -145,7 +146,7 @@ export function CustomFieldRenderer({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          required={definition.is_required}
+          required={isRequired}
           disabled={disabled}
           className={textFieldClassName}
         />
@@ -186,7 +187,7 @@ export function CustomFieldRenderer({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          required={definition.is_required}
+          required={isRequired}
           disabled={disabled}
           rows={typeof presentation.rows === "number" ? presentation.rows : 4}
           className={textFieldClassName}
@@ -203,7 +204,7 @@ export function CustomFieldRenderer({
             onChange(nextValue === "" ? null : Number(nextValue));
           }}
           placeholder={placeholder}
-          required={definition.is_required}
+          required={isRequired}
           disabled={disabled}
           className={textFieldClassName}
         />
