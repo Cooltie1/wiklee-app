@@ -33,7 +33,6 @@ type FieldFormState = {
   key: string;
   label: string;
   field_type: TicketFieldType;
-  is_required: boolean;
   placeholder: string;
   options: FieldOptionFormState[];
   booleanDefaultValue: BooleanDefaultValue;
@@ -159,7 +158,6 @@ function toFieldFormState(field?: EditableField): FieldFormState {
     key: field?.key ?? "",
     label: field?.label ?? "",
     field_type: field?.field_type ?? "text",
-    is_required: field?.is_required ?? false,
     placeholder: typeof config.placeholder === "string" ? config.placeholder : "",
     options: nextOptions,
     booleanDefaultValue:
@@ -418,7 +416,7 @@ export function CustomFieldSettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_field_definitions")
-        .select("id, org_id, key, label, field_type, is_required, is_active, config, created_at")
+        .select("id, org_id, key, label, field_type, is_active, config, created_at")
         .eq("org_id", profile.org_id);
 
       if (!isMounted) return;
@@ -507,7 +505,6 @@ export function CustomFieldSettingsTable() {
     const basePayload = {
       org_id: orgId,
       label: formState.label.trim(),
-      is_required: formState.is_required,
       is_active: true,
       config: buildConfig(formState),
     };
@@ -522,7 +519,7 @@ export function CustomFieldSettingsTable() {
         .update(updatePayload)
         .eq("id", formState.id)
         .eq("org_id", orgId)
-        .select("id, org_id, key, label, field_type, is_required, is_active, config, created_at")
+        .select("id, org_id, key, label, field_type, is_active, config, created_at")
         .single();
 
       setIsSaving(false);
@@ -549,7 +546,7 @@ export function CustomFieldSettingsTable() {
     const { data, error } = await supabase
       .from("ticket_field_definitions")
       .insert(createPayload)
-      .select("id, org_id, key, label, field_type, is_required, is_active, config, created_at")
+      .select("id, org_id, key, label, field_type, is_active, config, created_at")
       .single();
 
     setIsSaving(false);
@@ -1031,15 +1028,6 @@ export function CustomFieldSettingsTable() {
               </div>
               {isEditing ? <p className="text-xs text-muted-foreground">Field type cannot be changed after the field is created.</p> : null}
             </div>
-
-            <label htmlFor="custom-field-required" className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Checkbox
-                id="custom-field-required"
-                checked={formState.is_required}
-                onCheckedChange={(checked) => setFormState((current) => ({ ...current, is_required: checked === true }))}
-              />
-              Required field
-            </label>
 
             {typeSpecificConfig}
 
