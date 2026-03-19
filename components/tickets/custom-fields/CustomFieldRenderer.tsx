@@ -200,15 +200,17 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
       )}
 
       {definition.field_type === "boolean" && (
-        <label htmlFor={definition.id} className="flex items-center gap-2 text-sm text-zinc-700">
-          <Checkbox
-            id={definition.id}
-            checked={value === true}
-            onCheckedChange={(checked) => onChange(checked === true)}
-            disabled={disabled}
-          />
-          <span className="font-semibold">{`${definition.label}${requiredMark}`}</span>
-        </label>
+        <div className="rounded-md border border-zinc-200 bg-white px-4 py-3">
+          <label className="flex items-center gap-3 text-sm text-zinc-700">
+            <Checkbox
+              id={definition.id}
+              checked={value === true}
+              onCheckedChange={(checked) => onChange(checked === true)}
+              disabled={disabled}
+            />
+            <span className="font-semibold leading-none">{`${definition.label}${requiredMark}`}</span>
+          </label>
+        </div>
       )}
 
       {definition.field_type === "select" && (
