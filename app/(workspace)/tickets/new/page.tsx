@@ -19,6 +19,7 @@ import {
   type CustomFieldFormValue,
   getFormValueFromRow,
   isCustomFieldMissingValue,
+  sortTicketFieldDefinitions,
   type TicketFieldDefinition,
 } from "@/lib/ticketCustomFields";
 import { isAgentLikeRole } from "@/lib/roles";
@@ -121,14 +122,12 @@ export default function NewTicketPage() {
       if (currentUserProfile?.org_id) {
         const { data: definitions, error: definitionsError } = await supabase
           .from("ticket_field_definitions")
-          .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+          .select("id, org_id, key, label, field_type, is_active, config, created_at")
           .eq("org_id", currentUserProfile.org_id)
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: true });
+          .eq("is_active", true);
 
         if (!definitionsError) {
-          const loadedDefinitions = (definitions ?? []) as TicketFieldDefinition[];
+          const loadedDefinitions = sortTicketFieldDefinitions((definitions ?? []) as TicketFieldDefinition[]);
           setCustomFieldDefinitions(loadedDefinitions);
           setCustomFieldValues(
             loadedDefinitions.reduce<Record<string, CustomFieldFormValue>>((acc, definition) => {
