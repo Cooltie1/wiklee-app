@@ -45,6 +45,10 @@ const FIELD_TYPE_OPTIONS: FieldTypeOption[] = [
   { id: "multi_select", label: "Multi-select" },
 ];
 
+function getFieldTypeLabel(fieldType: TicketFieldType) {
+  return FIELD_TYPE_OPTIONS.find((option) => option.id === fieldType)?.label ?? fieldType;
+}
+
 function orderFields(fields: EditableField[]) {
   return [...fields].sort((a, b) => {
     const labelDiff = a.label.localeCompare(b.label);
@@ -224,11 +228,9 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
-    const payload = {
+    const basePayload = {
       org_id: orgId,
-      key: formState.key.trim().toLowerCase(),
       label: formState.label.trim(),
-      field_type: formState.field_type,
       is_required: false,
       is_active: true,
       config: buildConfig(formState),
@@ -238,9 +240,10 @@ export function CustomFieldSettingsTable() {
     setDialogErrorMessage("");
 
     if (formState.id) {
+      const updatePayload = basePayload;
       const { data, error } = await supabase
         .from("ticket_field_definitions")
-        .update(payload)
+        .update(updatePayload)
         .eq("id", formState.id)
         .eq("org_id", orgId)
         .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
@@ -261,9 +264,15 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
+    const createPayload = {
+      ...basePayload,
+      key: formState.key.trim().toLowerCase(),
+      field_type: formState.field_type,
+    };
+
     const { data, error } = await supabase
       .from("ticket_field_definitions")
-      .insert(payload)
+      .insert(createPayload)
       .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
       .single();
 
@@ -460,7 +469,7 @@ export function CustomFieldSettingsTable() {
                   <tr key={field.id} className="border-b last:border-0">
                     <td className="py-4 font-medium">{field.label}</td>
                     <td className="py-4 text-sm text-muted-foreground">{field.key}</td>
-                    <td className="py-4">{field.field_type}</td>
+                    <td className="py-4">{getFieldTypeLabel(field.field_type)}</td>
                     <td className="py-4 text-sm text-muted-foreground">
                       {typeof field.config?.placeholder === "string" && field.config.placeholder.trim()
                         ? field.config.placeholder
@@ -588,7 +597,9 @@ export function CustomFieldSettingsTable() {
                 }
                 placeholder="affected_service"
                 required
+                disabled={isEditing}
               />
+              {isEditing ? <p className="text-xs text-muted-foreground">Key cannot be changed after the field is created.</p> : null}
             </div>
 
             <div className="space-y-1">
@@ -611,8 +622,10 @@ export function CustomFieldSettingsTable() {
                   placeholder="Select field type"
                   searchable={false}
                   emptyText="No field types found"
+                  disabled={isEditing}
                 />
               </div>
+              {isEditing ? <p className="text-xs text-muted-foreground">Field type cannot be changed after the field is created.</p> : null}
             </div>
 
             {(formState.field_type === "select" || formState.field_type === "multi_select") && (
