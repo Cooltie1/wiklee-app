@@ -6,9 +6,8 @@ export type TicketFieldDefinition = {
   key: string;
   label: string;
   field_type: TicketFieldType;
-  is_required: boolean;
+  is_required?: boolean;
   is_active: boolean;
-  sort_order: number | null;
   config: Record<string, unknown> | null;
   created_at: string;
 };
@@ -92,6 +91,17 @@ export function getFormValueFromRow(definition: TicketFieldDefinition, row: Tick
     default:
       return null;
   }
+}
+
+export function sortTicketFieldDefinitions(definitions: TicketFieldDefinition[]): TicketFieldDefinition[] {
+  return [...definitions].sort((a, b) => {
+    const labelDiff = a.label.localeCompare(b.label);
+    if (labelDiff !== 0) {
+      return labelDiff;
+    }
+
+    return a.key.localeCompare(b.key);
+  });
 }
 
 export function isCustomFieldMissingValue(definition: TicketFieldDefinition, value: CustomFieldFormValue): boolean {

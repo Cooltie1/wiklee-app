@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { normalizeRole } from "@/lib/roles";
 import { supabase } from "@/lib/supabaseClient";
-import { type TicketFieldDefinition, type TicketFieldType } from "@/lib/ticketCustomFields";
+import { sortTicketFieldDefinitions, type TicketFieldDefinition, type TicketFieldType } from "@/lib/ticketCustomFields";
 
 type EditableField = TicketFieldDefinition & {
   config: Record<string, unknown> | null;
@@ -47,17 +47,6 @@ const FIELD_TYPE_OPTIONS: FieldTypeOption[] = [
 
 function getFieldTypeLabel(fieldType: TicketFieldType) {
   return FIELD_TYPE_OPTIONS.find((option) => option.id === fieldType)?.label ?? fieldType;
-}
-
-function orderFields(fields: EditableField[]) {
-  return [...fields].sort((a, b) => {
-    const labelDiff = a.label.localeCompare(b.label);
-    if (labelDiff !== 0) {
-      return labelDiff;
-    }
-
-    return a.key.localeCompare(b.key);
-  });
 }
 
 function toFieldFormState(field?: EditableField): FieldFormState {
@@ -158,9 +147,8 @@ export function CustomFieldSettingsTable() {
 
       const { data, error } = await supabase
         .from("ticket_field_definitions")
-        .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
-        .eq("org_id", profile.org_id)
-        .order("created_at", { ascending: true });
+        .select("id, org_id, key, label, field_type, is_active, config, created_at")
+        .eq("org_id", profile.org_id);
 
       if (!isMounted) return;
 
@@ -172,7 +160,7 @@ export function CustomFieldSettingsTable() {
 
       setOrgId(profile.org_id);
       setCanEditSettings(normalizeRole(profile.role) === "admin");
-      setFields(orderFields((data ?? []) as EditableField[]));
+      setFields(sortTicketFieldDefinitions((data ?? []) as EditableField[]));
       setIsLoading(false);
     }
 
@@ -234,7 +222,6 @@ export function CustomFieldSettingsTable() {
     const basePayload = {
       org_id: orgId,
       label: formState.label.trim(),
-      is_required: false,
       is_active: true,
       config: buildConfig(formState),
     };
@@ -249,7 +236,7 @@ export function CustomFieldSettingsTable() {
         .update(updatePayload)
         .eq("id", formState.id)
         .eq("org_id", orgId)
-        .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+        .select("id, org_id, key, label, field_type, is_active, config, created_at")
         .single();
 
       setIsSaving(false);
@@ -260,7 +247,7 @@ export function CustomFieldSettingsTable() {
       }
 
       setFields((current) =>
-        orderFields(current.map((field) => (field.id === data.id ? (data as EditableField) : field)))
+        sortTicketFieldDefinitions(current.map((field) => (field.id === data.id ? (data as EditableField) : field)))
       );
       setIsDialogOpen(false);
       setDialogErrorMessage("");
@@ -276,7 +263,7 @@ export function CustomFieldSettingsTable() {
     const { data, error } = await supabase
       .from("ticket_field_definitions")
       .insert(createPayload)
-      .select("id, org_id, key, label, field_type, is_required, is_active, sort_order, config, created_at")
+      .select("id, org_id, key, label, field_type, is_active, config, created_at")
       .single();
 
     setIsSaving(false);
@@ -286,7 +273,7 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
-    setFields((current) => orderFields([...current, data as EditableField]));
+    setFields((current) => sortTicketFieldDefinitions([...current, data as EditableField]));
     setIsDialogOpen(false);
     setDialogErrorMessage("");
   };
@@ -318,7 +305,7 @@ export function CustomFieldSettingsTable() {
     }
 
     setFields((current) =>
-      orderFields(
+      sortTicketFieldDefinitions(
         current.map((field) =>
           field.id === fieldId
             ? {
@@ -354,7 +341,7 @@ export function CustomFieldSettingsTable() {
     }
 
     setFields((current) =>
-      orderFields(
+      sortTicketFieldDefinitions(
         current.map((field) =>
           field.id === fieldPendingDeactivation.id
             ? {
