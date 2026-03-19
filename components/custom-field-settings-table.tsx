@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Ban, MoreHorizontal, Pencil, Plus, Power, Trash2 } from "lucide-react";
 
+import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,7 +30,20 @@ type FieldFormState = {
   placeholder: string;
 };
 
-const FIELD_TYPE_OPTIONS: TicketFieldType[] = ["text", "textarea", "select", "number", "boolean", "date", "multi_select"];
+type FieldTypeOption = {
+  id: TicketFieldType;
+  label: string;
+};
+
+const FIELD_TYPE_OPTIONS: FieldTypeOption[] = [
+  { id: "text", label: "Text" },
+  { id: "textarea", label: "Textarea" },
+  { id: "select", label: "Select" },
+  { id: "number", label: "Number" },
+  { id: "boolean", label: "Boolean" },
+  { id: "date", label: "Date" },
+  { id: "multi_select", label: "Multi-select" },
+];
 
 function orderFields(fields: EditableField[]) {
   return [...fields].sort((a, b) => {
@@ -67,11 +81,9 @@ function toFieldFormState(field?: EditableField): FieldFormState {
 }
 
 function buildConfig(formState: FieldFormState) {
-  const config: Record<string, unknown> = {};
-
-  if (formState.placeholder.trim()) {
-    config.placeholder = formState.placeholder.trim();
-  }
+  const config: Record<string, unknown> = {
+    placeholder: formState.placeholder.trim() || "",
+  };
 
   if (formState.field_type === "select" || formState.field_type === "multi_select") {
     const optionLines = formState.optionsText
@@ -88,7 +100,7 @@ function buildConfig(formState: FieldFormState) {
     }));
   }
 
-  return Object.keys(config).length ? config : null;
+  return config;
 }
 
 export function CustomFieldSettingsTable() {
@@ -96,6 +108,7 @@ export function CustomFieldSettingsTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [dialogErrorMessage, setDialogErrorMessage] = useState("");
   const [orgId, setOrgId] = useState<string | null>(null);
   const [canEditSettings, setCanEditSettings] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<FieldFilter>("active");
@@ -183,13 +196,13 @@ export function CustomFieldSettingsTable() {
 
   const openCreateDialog = () => {
     setFormState(toFieldFormState());
-    setErrorMessage("");
+    setDialogErrorMessage("");
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (field: EditableField) => {
     setFormState(toFieldFormState(field));
-    setErrorMessage("");
+    setDialogErrorMessage("");
     setIsDialogOpen(true);
   };
 
@@ -197,17 +210,17 @@ export function CustomFieldSettingsTable() {
     event.preventDefault();
 
     if (!canEditSettings) {
-      setErrorMessage("This section is read-only for agents.");
+      setDialogErrorMessage("This section is read-only for agents.");
       return;
     }
 
     if (!orgId) {
-      setErrorMessage("Unable to determine your organization");
+      setDialogErrorMessage("Unable to determine your organization");
       return;
     }
 
     if (!formState.label.trim() || !formState.key.trim()) {
-      setErrorMessage("Label and key are required.");
+      setDialogErrorMessage("Label and key are required.");
       return;
     }
 
@@ -222,7 +235,7 @@ export function CustomFieldSettingsTable() {
     };
 
     setIsSaving(true);
-    setErrorMessage("");
+    setDialogErrorMessage("");
 
     if (formState.id) {
       const { data, error } = await supabase
@@ -236,7 +249,7 @@ export function CustomFieldSettingsTable() {
       setIsSaving(false);
 
       if (error || !data) {
-        setErrorMessage(error?.message || "Unable to update custom field");
+        setDialogErrorMessage(error?.message || "Unable to update custom field");
         return;
       }
 
@@ -244,6 +257,7 @@ export function CustomFieldSettingsTable() {
         orderFields(current.map((field) => (field.id === data.id ? (data as EditableField) : field)))
       );
       setIsDialogOpen(false);
+      setDialogErrorMessage("");
       return;
     }
 
@@ -256,12 +270,13 @@ export function CustomFieldSettingsTable() {
     setIsSaving(false);
 
     if (error || !data) {
-      setErrorMessage(error?.message || "Unable to create custom field");
+      setDialogErrorMessage(error?.message || "Unable to create custom field");
       return;
     }
 
     setFields((current) => orderFields([...current, data as EditableField]));
     setIsDialogOpen(false);
+    setDialogErrorMessage("");
   };
 
   const handleActivate = async (fieldId: string) => {
@@ -519,6 +534,9 @@ export function CustomFieldSettingsTable() {
           }
 
           setIsDialogOpen(nextOpen);
+          if (!nextOpen) {
+            setDialogErrorMessage("");
+          }
         }}
       >
         <DialogContent>
@@ -528,6 +546,8 @@ export function CustomFieldSettingsTable() {
           </DialogHeader>
 
           <form className="space-y-3" onSubmit={handleSave}>
+            {dialogErrorMessage ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{dialogErrorMessage}</p> : null}
+
             <div className="space-y-1">
               <Label htmlFor="custom-field-label">Label</Label>
               <Input
@@ -573,23 +593,26 @@ export function CustomFieldSettingsTable() {
 
             <div className="space-y-1">
               <Label htmlFor="custom-field-type">Field type</Label>
-              <select
-                id="custom-field-type"
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
-                value={formState.field_type}
-                onChange={(event) =>
-                  setFormState((current) => ({
-                    ...current,
-                    field_type: event.target.value as TicketFieldType,
-                  }))
-                }
-              >
-                {FIELD_TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+              <div id="custom-field-type">
+                <LookupDropdown
+                  items={FIELD_TYPE_OPTIONS}
+                  selectedId={formState.field_type}
+                  onSelect={(selectedId) => {
+                    if (!selectedId) {
+                      return;
+                    }
+
+                    setFormState((current) => ({
+                      ...current,
+                      field_type: selectedId as TicketFieldType,
+                    }));
+                  }}
+                  getItemLabel={(type) => type.label}
+                  placeholder="Select field type"
+                  searchable={false}
+                  emptyText="No field types found"
+                />
+              </div>
             </div>
 
             {(formState.field_type === "select" || formState.field_type === "multi_select") && (
