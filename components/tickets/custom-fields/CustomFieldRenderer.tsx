@@ -1,5 +1,5 @@
 import { format, parse } from "date-fns";
-import { CalendarIcon, ChevronDownIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
 
 import { LookupDropdown } from "@/components/lookup/LookupDropdown";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ type CustomFieldRendererProps = {
   disabled?: boolean;
   readOnly?: boolean;
   textFieldClassName?: string;
+  useNativeBooleanCheckbox?: boolean;
 };
 
 type CustomFieldMultiSelectProps = {
@@ -103,7 +104,39 @@ function parseDateValue(value: CustomFieldFormValue) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-export function CustomFieldRenderer({ definition, value, onChange, errorMessage, disabled, readOnly, textFieldClassName }: CustomFieldRendererProps) {
+type NativeCheckboxProps = {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+};
+
+function NativeCheckbox({ id, checked, onChange, disabled }: NativeCheckboxProps) {
+  return (
+    <span className="relative inline-flex size-4 shrink-0">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        disabled={disabled}
+        className="peer border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 aria-invalid:border-destructive size-4 appearance-none rounded-[4px] border bg-white shadow-xs outline-none transition-shadow focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 checked:border-zinc-950 checked:bg-zinc-950"
+      />
+      <CheckIcon className="pointer-events-none absolute inset-0 m-auto size-3 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
+    </span>
+  );
+}
+
+export function CustomFieldRenderer({
+  definition,
+  value,
+  onChange,
+  errorMessage,
+  disabled,
+  readOnly,
+  textFieldClassName,
+  useNativeBooleanCheckbox = false,
+}: CustomFieldRendererProps) {
   const options = getOptionsFromConfig(definition.config);
   const requiredMark = definition.is_required ? " *" : "";
   const presentation = definition.config ?? {};
@@ -201,12 +234,21 @@ export function CustomFieldRenderer({ definition, value, onChange, errorMessage,
 
       {definition.field_type === "boolean" && (
         <label htmlFor={definition.id} className="flex items-center gap-2 text-sm text-zinc-700">
-          <Checkbox
-            id={definition.id}
-            checked={value === true}
-            onCheckedChange={(checked) => onChange(checked === true)}
-            disabled={disabled}
-          />
+          {useNativeBooleanCheckbox ? (
+            <NativeCheckbox
+              id={definition.id}
+              checked={value === true}
+              onChange={onChange}
+              disabled={disabled}
+            />
+          ) : (
+            <Checkbox
+              id={definition.id}
+              checked={value === true}
+              onCheckedChange={(checked) => onChange(checked === true)}
+              disabled={disabled}
+            />
+          )}
           <span className="font-semibold">{`${definition.label}${requiredMark}`}</span>
         </label>
       )}
