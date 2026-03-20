@@ -30,6 +30,7 @@ export type CustomFieldFormValue = string | number | boolean | string[] | null;
 export type TicketFieldOption = {
   label: string;
   value: string;
+  active?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -62,12 +63,14 @@ export function getOptionsFromConfig(config: Record<string, unknown> | null): Ti
         return {
           label: optionLabel,
           value: optionValue,
+          active: typeof option.active === "boolean" ? option.active : true,
         };
       }
 
       return null;
     })
-    .filter((option): option is TicketFieldOption => option !== null);
+    .filter((option): option is TicketFieldOption => option !== null)
+    .filter((option) => option.active !== false);
 }
 
 function getTodayDateValue() {

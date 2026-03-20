@@ -24,6 +24,9 @@ type FieldFilter = "active" | "inactive";
 type FieldOptionFormState = {
   id: string;
   label: string;
+  value: string;
+  active: boolean;
+  isNew: boolean;
 };
 
 type BooleanDefaultValue = "selected" | "deselected" | "";
@@ -64,6 +67,9 @@ function createOption(label = ""): FieldOptionFormState {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     label,
+    value: "",
+    active: true,
+    isNew: true,
   };
 }
 
@@ -75,16 +81,38 @@ function getOptionValue(label: string) {
     .replace(/^_+|_+$/g, "");
 }
 
+function getUniqueOptionValue(label: string, options: FieldOptionFormState[], currentOptionId?: string) {
+  const baseValue = getOptionValue(label);
+  if (!baseValue) {
+    return "";
+  }
+
+  const usedValues = new Set(
+    options.filter((option) => option.id !== currentOptionId).map((option) => option.value).filter(Boolean)
+  );
+
+  if (!usedValues.has(baseValue)) {
+    return baseValue;
+  }
+
+  let suffix = 1;
+  while (usedValues.has(`${baseValue}_${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseValue}_${suffix}`;
+}
+
 function getOptionValueMap(options: FieldOptionFormState[]) {
-  return new Map(options.map((option) => [option.id, getOptionValue(option.label)]));
+  return new Map(options.map((option) => [option.id, option.active ? option.value : ""]));
+}
+
+function getActiveOptions(options: FieldOptionFormState[]) {
+  return options.filter((option) => option.active && option.label.trim() && option.value);
 }
 
 function normalizeSelectedValues(values: string[], options: FieldOptionFormState[]) {
-  const allowedValues = new Set(
-    options
-      .map((option) => getOptionValue(option.label))
-      .filter(Boolean)
-  );
+  const allowedValues = new Set(getActiveOptions(options).map((option) => option.value));
 
   return values.filter((value) => allowedValues.has(value));
 }
@@ -138,18 +166,37 @@ function toFieldFormState(field?: EditableField): FieldFormState {
   const config = field?.config ?? {};
   const rawOptions = Array.isArray(config.options) ? config.options : [];
   const options = rawOptions
-    .map((option) => {
+    .reduce<FieldOptionFormState[]>((accumulator, option, index) => {
       if (typeof option === "string") {
-        return createOption(option);
+        accumulator.push({
+          id: `existing-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          label: option,
+          value: getUniqueOptionValue(option, accumulator),
+          active: true,
+          isNew: false,
+        });
+        return accumulator;
       }
 
       if (option && typeof option === "object" && typeof (option as { label?: unknown }).label === "string") {
-        return createOption((option as { label: string }).label);
+        const label = (option as { label: string }).label;
+        const value = typeof (option as { value?: unknown }).value === "string"
+          ? (option as { value: string }).value
+          : getUniqueOptionValue(label, accumulator);
+        const active = typeof (option as { active?: unknown }).active === "boolean" ? (option as { active: boolean }).active : true;
+
+        accumulator.push({
+          id: `existing-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          label,
+          value,
+          active,
+          isNew: false,
+        });
+        return accumulator;
       }
 
-      return null;
-    })
-    .filter((option): option is FieldOptionFormState => option !== null);
+      return accumulator;
+    }, []);
 
   const nextOptions = field?.field_type === "select" || field?.field_type === "multi_select" ? options.length ? options : [createOption()] : [];
 
@@ -179,11 +226,11 @@ function buildConfig(formState: FieldFormState) {
 
   if (formState.field_type === "select" || formState.field_type === "multi_select") {
     const options = formState.options
-      .map((option) => option.label.trim())
-      .filter(Boolean)
-      .map((label) => ({
-        label,
-        value: getOptionValue(label),
+      .filter((option) => option.label.trim() || !option.isNew)
+      .map((option) => ({
+        label: option.label.trim(),
+        value: option.value,
+        active: option.active,
       }));
 
     config.options = options;
@@ -222,21 +269,40 @@ function ValueListEditor({
   onSelectedValuesChange: (values: string[]) => void;
 }) {
   const valueMap = getOptionValueMap(options);
+  const activeOptions = getActiveOptions(options);
 
   const moveOption = (index: number, direction: -1 | 1) => {
-    const nextIndex = index + direction;
+    const currentIndex = options.findIndex((option) => option.id === activeOptions[index]?.id);
+    if (currentIndex === -1) {
+      return;
+    }
+    const nextIndex = currentIndex + direction;
     if (nextIndex < 0 || nextIndex >= options.length) {
       return;
     }
 
     const nextOptions = [...options];
-    const [item] = nextOptions.splice(index, 1);
+    const [item] = nextOptions.splice(currentIndex, 1);
     nextOptions.splice(nextIndex, 0, item);
     onOptionsChange(nextOptions);
   };
 
   const updateOptionLabel = (optionId: string, label: string) => {
-    const nextOptions = options.map((option) => (option.id === optionId ? { ...option, label } : option));
+    const nextOptions = options.map((option) => {
+      if (option.id !== optionId) {
+        return option;
+      }
+
+      if (!option.isNew) {
+        return { ...option, label };
+      }
+
+      return {
+        ...option,
+        label,
+        value: getUniqueOptionValue(label, options, optionId),
+      };
+    });
     const nextMap = getOptionValueMap(nextOptions);
     const remappedDefaults = selectedValues
       .map((selectedValue) => {
@@ -254,7 +320,17 @@ function ValueListEditor({
   };
 
   const removeOption = (optionId: string) => {
-    const nextOptions = options.filter((option) => option.id !== optionId);
+    const nextOptions = options.flatMap((option) => {
+      if (option.id !== optionId) {
+        return [option];
+      }
+
+      if (option.isNew) {
+        return [];
+      }
+
+      return [{ ...option, active: false }];
+    });
     const ensuredOptions = nextOptions.length ? nextOptions : [createOption()];
     const removedValue = valueMap.get(optionId);
 
@@ -309,7 +385,13 @@ function ValueListEditor({
       </div>
 
       <div className="space-y-2">
-        {options.map((option, index) => {
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <span className="text-center">Default</span>
+          <span>Value</span>
+          <span className="sr-only">Actions</span>
+        </div>
+
+        {activeOptions.map((option, index) => {
           const optionValue = valueMap.get(option.id) ?? "";
           const isChecked = selectedValues.includes(optionValue);
 
@@ -341,7 +423,7 @@ function ValueListEditor({
                   variant="ghost"
                   size="icon"
                   onClick={() => moveOption(index, 1)}
-                  disabled={index === options.length - 1}
+                  disabled={index === activeOptions.length - 1}
                   aria-label={`Move ${option.label || `value ${index + 1}`} down`}
                 >
                   <ArrowDown className="h-4 w-4" />
@@ -496,7 +578,7 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
-    const trimmedOptions = formState.options.map((option) => option.label.trim()).filter(Boolean);
+    const trimmedOptions = getActiveOptions(formState.options).map((option) => option.label.trim()).filter(Boolean);
     if ((formState.field_type === "select" || formState.field_type === "multi_select") && trimmedOptions.length === 0) {
       setDialogErrorMessage("Add at least one value for select and multi-select fields.");
       return;
@@ -768,7 +850,8 @@ export function CustomFieldSettingsTable() {
             <p className="text-xs text-muted-foreground">
               {selectedDefaults.length
                 ? formState.options
-                    .filter((option) => selectedDefaults.includes(getOptionValue(option.label)))
+                    .filter((option) => selectedDefaults.includes(option.value))
+                    .filter((option) => option.active)
                     .map((option) => option.label.trim())
                     .filter(Boolean)
                     .join(formState.field_type === "multi_select" ? ", " : "")
