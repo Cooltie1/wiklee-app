@@ -30,13 +30,17 @@ export type CustomFieldFormValue = string | number | boolean | string[] | null;
 export type TicketFieldOption = {
   label: string;
   value: string;
+  active: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function getOptionsFromConfig(config: Record<string, unknown> | null): TicketFieldOption[] {
+export function getOptionsFromConfig(
+  config: Record<string, unknown> | null,
+  { includeInactive = false }: { includeInactive?: boolean } = {}
+): TicketFieldOption[] {
   if (!config) return [];
 
   const options = config.options;
@@ -48,12 +52,13 @@ export function getOptionsFromConfig(config: Record<string, unknown> | null): Ti
   return options
     .map((option) => {
       if (typeof option === "string") {
-        return { label: option, value: option };
+        return { label: option, value: option, active: true };
       }
 
       if (isRecord(option)) {
         const optionValue = typeof option.value === "string" ? option.value : null;
         const optionLabel = typeof option.label === "string" ? option.label : optionValue;
+        const optionActive = typeof option.active === "boolean" ? option.active : true;
 
         if (!optionLabel || !optionValue) {
           return null;
@@ -62,12 +67,14 @@ export function getOptionsFromConfig(config: Record<string, unknown> | null): Ti
         return {
           label: optionLabel,
           value: optionValue,
+          active: optionActive,
         };
       }
 
       return null;
     })
-    .filter((option): option is TicketFieldOption => option !== null);
+    .filter((option): option is TicketFieldOption => option !== null)
+    .filter((option) => includeInactive || option.active);
 }
 
 function getTodayDateValue() {

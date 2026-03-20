@@ -24,6 +24,9 @@ type FieldFilter = "active" | "inactive";
 type FieldOptionFormState = {
   id: string;
   label: string;
+  value: string;
+  active: boolean;
+  isNew: boolean;
 };
 
 type BooleanDefaultValue = "selected" | "deselected" | "";
@@ -64,6 +67,9 @@ function createOption(label = ""): FieldOptionFormState {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     label,
+    value: "",
+    active: true,
+    isNew: true,
   };
 }
 
@@ -75,14 +81,38 @@ function getOptionValue(label: string) {
     .replace(/^_+|_+$/g, "");
 }
 
+function getUniqueOptionValue(label: string, options: FieldOptionFormState[], optionId?: string) {
+  const baseValue = getOptionValue(label);
+
+  if (!baseValue) {
+    return "";
+  }
+
+  const usedValues = new Set(
+    options.filter((option) => option.id !== optionId && option.value).map((option) => option.value)
+  );
+
+  if (!usedValues.has(baseValue)) {
+    return baseValue;
+  }
+
+  let suffix = 1;
+  while (usedValues.has(`${baseValue}_${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseValue}_${suffix}`;
+}
+
 function getOptionValueMap(options: FieldOptionFormState[]) {
-  return new Map(options.map((option) => [option.id, getOptionValue(option.label)]));
+  return new Map(options.map((option) => [option.id, option.value]));
 }
 
 function normalizeSelectedValues(values: string[], options: FieldOptionFormState[]) {
   const allowedValues = new Set(
     options
-      .map((option) => getOptionValue(option.label))
+      .filter((option) => option.active)
+      .map((option) => option.value)
       .filter(Boolean)
   );
 
@@ -140,11 +170,25 @@ function toFieldFormState(field?: EditableField): FieldFormState {
   const options = rawOptions
     .map((option) => {
       if (typeof option === "string") {
-        return createOption(option);
+        return {
+          ...createOption(option),
+          value: getOptionValue(option),
+          isNew: false,
+        };
       }
 
       if (option && typeof option === "object" && typeof (option as { label?: unknown }).label === "string") {
-        return createOption((option as { label: string }).label);
+        const optionValue =
+          typeof (option as { value?: unknown }).value === "string"
+            ? (option as { value: string }).value
+            : getOptionValue((option as { label: string }).label);
+
+        return {
+          ...createOption((option as { label: string }).label),
+          value: optionValue,
+          active: typeof (option as { active?: unknown }).active === "boolean" ? Boolean((option as { active: boolean }).active) : true,
+          isNew: false,
+        };
       }
 
       return null;
@@ -162,9 +206,15 @@ function toFieldFormState(field?: EditableField): FieldFormState {
     options: nextOptions,
     booleanDefaultValue:
       typeof config.default_boolean === "boolean" ? (config.default_boolean ? "selected" : "deselected") : field?.field_type === "boolean" ? "deselected" : "",
-    selectDefaultValue: typeof config.default_value === "string" ? config.default_value : "",
+    selectDefaultValue: normalizeSelectedValues(
+      typeof config.default_value === "string" ? [config.default_value] : [],
+      nextOptions
+    )[0] ?? "",
     multiSelectDefaultValues: Array.isArray(config.default_values)
-      ? config.default_values.filter((value): value is string => typeof value === "string")
+      ? normalizeSelectedValues(
+          config.default_values.filter((value): value is string => typeof value === "string"),
+          nextOptions
+        )
       : [],
     dateDefaultToday: config.default_today === true,
   };
@@ -179,12 +229,12 @@ function buildConfig(formState: FieldFormState) {
 
   if (formState.field_type === "select" || formState.field_type === "multi_select") {
     const options = formState.options
-      .map((option) => option.label.trim())
-      .filter(Boolean)
-      .map((label) => ({
-        label,
-        value: getOptionValue(label),
-      }));
+      .map((option) => ({
+        label: option.label.trim(),
+        value: option.value,
+        active: option.active,
+      }))
+      .filter((option) => option.label && option.value);
 
     config.options = options;
 
@@ -222,21 +272,42 @@ function ValueListEditor({
   onSelectedValuesChange: (values: string[]) => void;
 }) {
   const valueMap = getOptionValueMap(options);
+  const visibleOptions = options.filter((option) => option.active);
 
   const moveOption = (index: number, direction: -1 | 1) => {
     const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= options.length) {
+    if (nextIndex < 0 || nextIndex >= visibleOptions.length) {
       return;
     }
 
     const nextOptions = [...options];
-    const [item] = nextOptions.splice(index, 1);
-    nextOptions.splice(nextIndex, 0, item);
+    const visibleOptionIds = visibleOptions.map((option) => option.id);
+    const movingId = visibleOptionIds[index];
+    const targetId = visibleOptionIds[nextIndex];
+    const movingIndex = nextOptions.findIndex((option) => option.id === movingId);
+    const targetIndex = nextOptions.findIndex((option) => option.id === targetId);
+
+    if (movingIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    const [item] = nextOptions.splice(movingIndex, 1);
+    nextOptions.splice(targetIndex, 0, item);
     onOptionsChange(nextOptions);
   };
 
   const updateOptionLabel = (optionId: string, label: string) => {
-    const nextOptions = options.map((option) => (option.id === optionId ? { ...option, label } : option));
+    const nextOptions = options.map((option) => {
+      if (option.id !== optionId) {
+        return option;
+      }
+
+      return {
+        ...option,
+        label,
+        value: option.isNew ? getUniqueOptionValue(label, options, optionId) : option.value,
+      };
+    });
     const nextMap = getOptionValueMap(nextOptions);
     const remappedDefaults = selectedValues
       .map((selectedValue) => {
@@ -254,9 +325,17 @@ function ValueListEditor({
   };
 
   const removeOption = (optionId: string) => {
-    const nextOptions = options.filter((option) => option.id !== optionId);
-    const ensuredOptions = nextOptions.length ? nextOptions : [createOption()];
+    const targetOption = options.find((option) => option.id === optionId);
+    if (!targetOption) {
+      return;
+    }
+
     const removedValue = valueMap.get(optionId);
+    const nextOptions = targetOption.isNew
+      ? options.filter((option) => option.id !== optionId)
+      : options.map((option) => (option.id === optionId ? { ...option, active: false } : option));
+    const hasVisibleOptions = nextOptions.some((option) => option.active);
+    const ensuredOptions = hasVisibleOptions ? nextOptions : [...nextOptions, createOption()];
 
     onOptionsChange(ensuredOptions);
     onSelectedValuesChange(normalizeSelectedValues(selectedValues.filter((value) => value !== removedValue), ensuredOptions));
@@ -309,7 +388,7 @@ function ValueListEditor({
       </div>
 
       <div className="space-y-2">
-        {options.map((option, index) => {
+        {visibleOptions.map((option, index) => {
           const optionValue = valueMap.get(option.id) ?? "";
           const isChecked = selectedValues.includes(optionValue);
 
@@ -341,7 +420,7 @@ function ValueListEditor({
                   variant="ghost"
                   size="icon"
                   onClick={() => moveOption(index, 1)}
-                  disabled={index === options.length - 1}
+                  disabled={index === visibleOptions.length - 1}
                   aria-label={`Move ${option.label || `value ${index + 1}`} down`}
                 >
                   <ArrowDown className="h-4 w-4" />
@@ -496,7 +575,7 @@ export function CustomFieldSettingsTable() {
       return;
     }
 
-    const trimmedOptions = formState.options.map((option) => option.label.trim()).filter(Boolean);
+    const trimmedOptions = formState.options.filter((option) => option.active).map((option) => option.label.trim()).filter(Boolean);
     if ((formState.field_type === "select" || formState.field_type === "multi_select") && trimmedOptions.length === 0) {
       setDialogErrorMessage("Add at least one value for select and multi-select fields.");
       return;
@@ -768,7 +847,7 @@ export function CustomFieldSettingsTable() {
             <p className="text-xs text-muted-foreground">
               {selectedDefaults.length
                 ? formState.options
-                    .filter((option) => selectedDefaults.includes(getOptionValue(option.label)))
+                    .filter((option) => option.active && selectedDefaults.includes(option.value))
                     .map((option) => option.label.trim())
                     .filter(Boolean)
                     .join(formState.field_type === "multi_select" ? ", " : "")
